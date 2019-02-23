@@ -386,7 +386,7 @@ class Portfolio:
         if ns < b.nshares:
             b2 = copy.deepcopy(b)
             b2.nshares -= ns
-            factor = ns / b.shares
+            factor = ns / b.nshares
             adjustDividends(b2.dividends, 1 - factor)
             adjustDividends(b2.return_of_capital, 1 - factor)
             adjustDividends(b.dividends, factor)
