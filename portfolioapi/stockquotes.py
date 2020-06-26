@@ -1,17 +1,20 @@
 #!/usr/bin/python3
 
+import bisect
 import csv
 from contextlib import closing
 import datetime
 import io
 import json
 import gzip
+import sqlite3
 import os
 import re
 import urllib.request
 
 
 quote_dir = '/var/www/html/quotes'
+quote_db = '/var/www/portfolioapi/cache/quotes.db'
 
 json_url_prefix = 'https://query1.finance.yahoo.com/v7/finance/quote?lang=en-US&region=US&corsDomain=finance.yahoo.com&fields=symbol,longName,shortName,regularMarketPrice,regularMarketChange,currency,regularMarketTime,regularMarketVolume,quantity,regularMarketDayHigh,regularMarketDayLow,regularMarketOpen,marketCap&symbols='
 json_url_suffix = '&formatted=false'
@@ -51,15 +54,23 @@ def getQuotesOld(d, symbols=None):
             d -= datetime.timedelta(days=1)
 
 
-def getQuotes(d, symbols=None):
-    while True:
-        # Loop to earlier days until a quote file is found.
-        try:
-            with open(os.path.join(quote_dir, d.isoformat() + '.csv')) as f:
-                return dict((k, float(v)) for k, v in csv.reader(f)
-                            if not symbols or k in symbols)
-        except FileNotFoundError:
-            d -= datetime.timedelta(days=1)
+def getFileQuotes(d, symbols=None):
+    # Loop to earlier days until a quote file is found.
+    names = sorted([x for x in os.listdir(quote_dir) if x.endswith('.csv')])
+    idx = bisect.bisect_right(names, d.isoformat() + '.csv')
+    if idx == 0:
+        return {}
+    with open(os.path.join(quote_dir, names[idx - 1])) as f:
+        return dict((k, float(v)) for k, v in csv.reader(f)
+                    if not symbols or k in symbols)
+
+
+def getFileQuoteDates(start, end):
+    names = sorted([x for x in os.listdir(quote_dir) if x.endswith('.csv')])
+    idx1 = bisect.bisect_left(names, start.isoformat() + '.csv')
+    idx2 = bisect.bisect_right(names, end.isoformat() + '.csv')
+    return [datetime.datetime.strptime(x[:-4], '%Y-%m-%d').date()
+            for x in names[idx1:idx2]]
 
 
 def createRequest(url):
@@ -106,7 +117,8 @@ def retrieveJsonQuotes(symbols):
 
 
 def retrieveQuotes(symbols, force=False):
-    quote_path = os.path.join(quote_dir, datetime.date.today().strftime('%Y-%m-%d.csv'))
+    ds = datetime.date.today().isoformat()
+    quote_path = os.path.join(quote_dir, '{0}.csv'.format(ds))
     if not force and os.path.exists(quote_path):
         return
     stocks = []
@@ -128,8 +140,87 @@ def retrieveQuotes(symbols, force=False):
         writer = csv.writer(f)
         for q in quotes:
             writer.writerow(q)
+    if quotes:
+        try:
+            c = getQuoteCursor(quote_db)
+            c.execute('DELETE FROM quotes WHERE date=?', [ds])
+            c.executemany('INSERT INTO quotes(date,symbol,quote) VALUES(?,?,?)',
+                          [(ds, k, v) for k, v in quotes])
+            c.connection.commit()
+        finally:
+            c.connection.close()
+
+
+def getQuoteCursor(name):
+    conn = sqlite3.connect(name)
+    return conn.cursor()
+
+
+def createQuoteTable(cursor):
+    cursor.execute('CREATE TABLE IF NOT EXISTS quotes ('
+                   'date TEXT, symbol TEXT, quote NUMBER,'
+                   'PRIMARY KEY (date, symbol))')
+
+
+def storeAllQuotes():
+    c = getQuoteCursor(quote_db)
+    try:
+        createQuoteTable(c)
+        quote_dates = getFileQuoteDates(datetime.date(1990, 1, 1),
+                                        datetime.date.today())
+        c.execute('DELETE FROM quotes')
+        for d in quote_dates:
+            ds = d.isoformat()
+            quotes = getFileQuotes(d)
+            c.executemany('INSERT INTO quotes(date,symbol,quote) '
+                          'VALUES(?,?,?)',
+                          [(ds, k, v) for k, v in quotes.items()])
+        c.connection.commit()
+    finally:
+        c.connection.close()
+
+
+def getQuotes(d, symbols=None):
+    c = getQuoteCursor(quote_db)
+    try:
+        c.execute('SELECT MAX(date) FROM quotes WHERE date<=?',
+                  [d.isoformat()])
+        row = c.fetchone()
+        if row is None:
+            return {}
+        if symbols:
+            # Handle set
+            symbols = list(symbols)
+            c.execute('SELECT symbol,quote FROM quotes '
+                      'WHERE date=? AND symbol IN ({0})'
+                      .format(','.join(['?'] * len(symbols))),
+                      [row[0]] + symbols)
+        else:
+            c.execute('SELECT symbol,quote FROM quotes WHERE date=?', [row[0]])
+        return dict(c.fetchall())
+    finally:
+        c.connection.close()
+
+
+def getQuoteDates(start, end):
+    c = getQuoteCursor(quote_db)
+    try:
+        c.execute('SELECT DISTINCT date FROM quotes WHERE date>=? AND date<=? '
+                  'ORDER BY date',
+                  [start.isoformat(), end.isoformat()])
+        return [datetime.datetime.strptime(x[0], '%Y-%m-%d').date()
+                for x in c.fetchall()]
+    finally:
+        c.connection.close()
+
+
+def main():
+    # retrieveQuotes(['AAPL', 'HPE'])
+    # print(getQuotes2(datetime.date.today(), ['AAPL', 'HPE']))
+    storeAllQuotes()
+    # print(getQuoteDates(datetime.date(2020, 2, 3), datetime.date(2020, 2, 10)))
+    # print(getQuotes(datetime.date(2020, 2, 9), ['AAPL', 'SPY', 'VOO']))
 
 
 if __name__ == '__main__':
-    # retrieveQuotes(['AAPL', 'HPE'])
-    print(getQuotes2(datetime.date.today(), ['AAPL', 'HPE']))
+    main()

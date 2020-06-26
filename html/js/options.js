@@ -1,6 +1,6 @@
 import {makeJSONRequest} from './xhr.js';
 import {
-  collectSymbols, completeUnrealizedBuckets, formatAmount, formatCount, getBucketTotal,
+  collectSymbols, completeUnrealizedLots, formatAmount, formatCount, getLotTotal,
   getOptionParameters
 } from './utils.js';
 import {ServerError, StockSymbol} from './ui.js';
@@ -42,38 +42,38 @@ function OptionGroup(props) {
   const info_url = 'http://finance.yahoo.com/quotes/';
   const children = [];
   let total = 0;
-  for (let i = 0; i < props.buckets.length; i++) {
-    const b = props.buckets[i];
+  for (let i = 0; i < props.lots.length; i++) {
+    const lt = props.lots[i];
     const row = [];
-    const opt = getOptionParameters(b.symbol);
-    let left_class = b.end_date ? 'left' : 'left unrealized';
-    let small_class = b.end_date ? 'small' : 'small unrealized';
-    let normal_class = b.end_date ? '' : 'unrealized';
+    const opt = getOptionParameters(lt.symbol);
+    let left_class = lt.end_date ? 'left' : 'left unrealized';
+    let small_class = lt.end_date ? 'small' : 'small unrealized';
+    let normal_class = lt.end_date ? '' : 'unrealized';
     const group_end_class = 'group-end'
-    if (i === props.buckets.length - 1) {
+    if (i === props.lots.length - 1) {
       left_class += ` ${group_end_class}`;
       small_class += ` ${group_end_class}`;
       normal_class += ` ${group_end_class}`;
     }
     row.push(e('td', {className: left_class},
-               e(StockSymbol, {symbol: b.symbol, url: info_url + b.symbol})));
-    row.push(e('td', {className: normal_class}, formatCount(b.nshares)));
+               e(StockSymbol, {symbol: lt.symbol, url: info_url + lt.symbol})));
+    row.push(e('td', {className: normal_class}, formatCount(lt.nshares)));
     const date_props = ['start_date', 'end_date'];
     const amount_props = ['start_share_price', 'end_share_price'];
-    row.push(...date_props.map(p => e('td', {className: small_class}, b[p] || '')));
+    row.push(...date_props.map(p => e('td', {className: small_class}, lt[p] || '')));
     row.push(...amount_props.map(
-      p => e('td', {className: small_class}, formatAmount(b[p] || 0))));
-    let {amount, basis} = getBucketTotal(b);
+      p => e('td', {className: small_class}, formatAmount(lt[p] || 0))));
+    let {amount, basis} = getLotTotal(lt);
     let stock = '';
-    if (b.assigned) {
-      stock = (props.historical_quotes[b.end_date][opt[0]] || 0) - opt[3];
-      amount += stock * b.nshares * (opt[2] === 'C' ? 1 : -1);
+    if (lt.assigned) {
+      stock = (props.historical_quotes[lt.end_date][opt[0]] || 0) - opt[3];
+      amount += stock * lt.nshares * (opt[2] === 'C' ? 1 : -1);
       stock = formatAmount(stock);
     }
     total += amount - basis;
     row.push(e('td', {className: small_class}, stock));
     row.push(e('td', {className: normal_class}, formatAmount(amount - basis)));
-    if (i === props.buckets.length - 1)
+    if (i === props.lots.length - 1)
       row.push(e('td', {className: group_end_class}, formatAmount(total)));
     children.push(e('tr', {}, ...row));
   }
@@ -81,7 +81,7 @@ function OptionGroup(props) {
 }
 
 function Options(props) {
-  let symbols = collectSymbols(props.completed_buckets);
+  let symbols = collectSymbols(props.completed_lots);
   const symbol_map = new Map();
   let prev = null;
   let group;
@@ -89,8 +89,8 @@ function Options(props) {
   for (const s of symbols) {
     if (getOptionParameters(s))
       continue;
-    for (const b of props.completed_buckets) {
-      const opt = getOptionParameters(b.symbol);
+    for (const lt of props.completed_lots) {
+      const opt = getOptionParameters(lt.symbol);
       if (!opt || opt[0] !== s)
         continue;
       if (s !== prev) {
@@ -98,19 +98,19 @@ function Options(props) {
         group = [];
         symbol_map.set(s, group);
       }
-      let {amount, basis} = getBucketTotal(b);
-      if (b.assigned) {
-        const stock = (props.historical_quotes[b.end_date][opt[0]] || 0) - opt[3];
-        amount += stock * b.nshares * (opt[2] === 'C' ? 1 : -1);
+      let {amount, basis} = getLotTotal(lt);
+      if (lt.assigned) {
+        const stock = (props.historical_quotes[lt.end_date][opt[0]] || 0) - opt[3];
+        amount += stock * lt.nshares * (opt[2] === 'C' ? 1 : -1);
       }
       grand_total += amount - basis;
-      group.push(b);
+      group.push(lt);
     }
   }
   symbols = Array.from(symbol_map.keys());
   symbols.sort();
   const groups = symbols.map(
-    s => e(OptionGroup, {symbol: s, buckets: symbol_map.get(s),
+    s => e(OptionGroup, {symbol: s, lots: symbol_map.get(s),
                          historical_quotes: props.historical_quotes}));
   const cols = 9;
   return e('table', {cellSpacing: 0},
@@ -139,12 +139,12 @@ function renderOptions([data, accounts]) {
     return;
   }
   renderToc(data.account, data.date, [...accounts.accounts, 'combined']);
-  data.assigned_buckets.forEach(ab => ab.assigned = true);
-  data.completed_buckets.push(...data.assigned_buckets);
-  data.completed_buckets.sort((a, b) => a.end_date.localeCompare(b.end_date));
-  completeUnrealizedBuckets(data.buckets, data.quotes, data.completed_buckets);
+  data.assigned_lots.forEach(lt => lt.assigned = true);
+  data.completed_lots.push(...data.assigned_lots);
+  data.completed_lots.sort((a, b) => a.end_date.localeCompare(b.end_date));
+  completeUnrealizedLots(data.lots, data.quotes, data.completed_lots);
   const props = {
-    completed_buckets: data.completed_buckets,
+    completed_lots: data.completed_lots,
     historical_quotes: data.historical_quotes
   };
   ReactDOM.render(e(Options, props), document.getElementById('options'));

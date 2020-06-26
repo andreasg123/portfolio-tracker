@@ -1,0 +1,103 @@
+body {
+  font-family: Helvetica, Arial, sansserif;
+  font-size: 90%;
+}
+h2 {
+  font-size: 120%;
+}
+h3 {
+  font-size: 110%;
+  margin: 0;
+}
+td {
+  vertical-align: baseline;
+  text-align: right;
+  padding-left: 0.3em;
+  padding-right: 0.3em;
+  white-space: nowrap;
+}
+.left {
+  text-align: left;
+}
+.right {
+  text-align: right;
+}
+.center {
+  text-align: center;
+}
+td.money {
+  background-color: #b8e5b8;
+}
+.pos {
+  color: #008000;
+}
+.neg {
+  color: red;
+}
+.mult {
+  /* color: #3333ff; */
+  color: #0033cc;
+}
+.unrealized {
+  color: #0033cc;
+}
+.unrealized a {
+  color: #0033cc;
+}
+.small {
+  font-size: 90%;
+}
+.tiny {
+  font-size: 50%;
+}
+tr.odd {
+  background-color: #e5e5e5;
+}
+.total {
+  border-top: 2px solid black;
+}
+th {
+  border-top: 2px solid black;
+  border-bottom: 2px solid black;
+  font-size: 90%;
+}
+a {
+  color: black;
+}
+.up {
+  float: left;
+  font-weight: bold;
+  color: white;
+  background-color: #008000;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.down {
+  float: left;
+  font-weight: bold;
+  color: white;
+  background-color: red;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.unchanged {
+  float: left;
+  font-weight: bold;
+  color: black;
+  background-color: #ffff66;
+  overflow: hidden;
+  white-space: nowrap;
+}
+#toc {
+    font-size: 80%;
+    margin-bottom: 1em;
+}
+#pending, #dividend, #options {
+    margin-top: 2em;
+}
+.group-end {
+    border-bottom: 1px solid black;
+}
+.expander {
+    text-decoration: none;
+}

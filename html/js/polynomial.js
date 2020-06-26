@@ -4,6 +4,12 @@ export class Polynomial {
   }
 
   append(el) {
+    for (const el2 of this.elements) {
+      if (el2[1] === el[1]) {
+        el2[0] += el[0];
+        return;
+      }
+    }
     this.elements.push(el)
   }
 
@@ -38,8 +44,12 @@ export class Polynomial {
         return 0;
       const old_val = this.compute(old_x);
       new_x = old_x - old_val / dx;
-      if (!isFinite(new_x) || Math.abs(new_x - old_x) < 1e-10 || iter >= 100)
+      if (!isFinite(new_x) || Math.abs(new_x - old_x) < 1e-10 || iter >= 200) {
+        if (!isFinite(new_x)) {
+          console.log(new_x, old_x, old_val, dx);
+        }
         break;
+      }
     }
     return new_x;
   }

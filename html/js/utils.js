@@ -1,56 +1,58 @@
-export function makeCompletedBuckets(buckets, quotes, end_date) {
-  return buckets.map(b => ({
-    symbol: b.symbol,
-    nshares: b.nshares,
-    start_date: b.purchase_date,
+export function makeCompletedLots(lots, quotes, end_date) {
+  return lots.map(lt => ({
+    symbol: lt.symbol,
+    nshares: lt.nshares,
+    start_date: lt.purchase_date,
     end_date,
-    start_share_price: b.share_price,
-    end_share_price: quotes[b.symbol],
-    start_share_expense: b.share_expense,
-    start_share_adj: b.share_adj,
-    account: b.account
+    start_share_price: lt.share_price,
+    end_share_price: quotes[lt.symbol],
+    start_share_expense: lt.share_expense,
+    start_share_adj: lt.share_adj,
+    wash_days: lt.wash_days,
+    account: lt.account
   }));
 }
 
-export function completeUnrealizedBuckets(buckets, quotes, completed_buckets) {
-  completed_buckets.push(...makeCompletedBuckets(buckets, quotes));
+export function completeUnrealizedLots(lots, quotes, completed_lots) {
+  completed_lots.push(...makeCompletedLots(lots, quotes));
 }
 
-export function getBucketTotal(b) {
-  const amount = (b.nshares * (b.end_share_price || 0) -
-                  Math.abs(b.nshares) *
-                  ((b.end_share_adj || 0) + (b.end_share_expense || 0)));
-  const basis = (b.nshares * (b.start_share_price || 0) +
-                 Math.abs(b.nshares) *
-                 ((b.start_share_adj || 0) + (b.start_share_expense || 0)));
-  return {amount, basis, gain: amount - basis + (b.wash_sale || 0)}
+export function getLotTotal(lt) {
+  const amount = (lt.nshares * (lt.end_share_price || 0) -
+                  Math.abs(lt.nshares) *
+                  ((lt.end_share_adj || 0) + (lt.end_share_expense || 0)));
+  const basis = (lt.nshares * (lt.start_share_price || 0) +
+                 Math.abs(lt.nshares) *
+                 ((lt.start_share_adj || 0) + (lt.start_share_expense || 0)));
+  // wash sale is included in end_share_adj
+  return {amount, basis, gain: amount - basis}
 }
 
-export function collectSymbols(buckets) {
+export function collectSymbols(lots) {
   const symbols = [];
-  for (const b of buckets) {
-    const opt = getOptionParameters(b.symbol);
+  for (const lt of lots) {
+    const opt = getOptionParameters(lt.symbol);
     if (opt) {
       if (symbols.indexOf(opt[0]) < 0)
         symbols.push(opt[0]);
     }
-    else if (symbols.indexOf(b.symbol) < 0)
-      symbols.push(b.symbol);
+    else if (symbols.indexOf(lt.symbol) < 0)
+      symbols.push(lt.symbol);
   }
   symbols.sort();
   // console.log(symbols);
   return symbols;
 }
 
-export function groupBuckets(buckets) {
+export function groupLots(lots) {
   const sym_map = new Map();
-  for (const b of buckets) {
-    let g = sym_map.get(b.symbol);
+  for (const lt of lots) {
+    let g = sym_map.get(lt.symbol);
     if (!g) {
       g = [];
-      sym_map.set(b.symbol, g);
+      sym_map.set(lt.symbol, g);
     }
-    g.push(b);
+    g.push(lt);
   }
   return sym_map;
 }
@@ -118,6 +120,8 @@ export function formatAmount(x, digits) {
     return x;
   if (typeof digits !== 'number')
     digits = 2;
-  return x.toLocaleString(undefined, {minimumFractionDigits: digits,
-                                      maximumFractionDigits: digits});
+  const options = {minimumFractionDigits: digits, maximumFractionDigits: digits};
+  const s = x.toLocaleString(undefined, options);
+  const zero = (0).toLocaleString(undefined, options);
+  return s === '-' + zero ? zero : s;
 }
