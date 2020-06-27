@@ -396,11 +396,13 @@ class Portfolio:
         lt2.nshares = lt.nshares - nshares
         lt.nshares = nshares
         lots = self.lots[lt.symbol]
+        # if lt.symbol == 'AAPL120317C00540000':
+        #     print('splitLot', lt, lots)
         try:
             lots.insert(lots.index(lt), lt2)
         except ValueError:
             print('error', str(lt), [str(x) for x in lots])
-        return lt2
+        return (lt2, lt)
 
     def splitCompletedLot(self, clt, nshares):
         factor = nshares / clt.nshares
@@ -533,6 +535,8 @@ class Portfolio:
         if not completed:
             return
         sym = completed[0].symbol
+        # if sym == 'AAPL120317C00540000':
+        #     print('checkWashSell', [str(clt) for clt in completed])
         found = False
         for clt in completed:
             matches = [lt for lt in self.recent_buys if lt.symbol == sym]
@@ -553,7 +557,7 @@ class Portfolio:
                     remaining -= lt.nshares
                 else:
                     self.recent_sells.remove(clt)
-                    lt = self.splitLot(lt, lt.nshares - clt.nshares)
+                    lt, _ = self.splitLot(lt, lt.nshares - clt.nshares)
                     remaining = 0
                 lt.share_adj -= share_gain
                 lt.wash_days = clt.end_date - clt.start_date
@@ -570,18 +574,25 @@ class Portfolio:
                    if clt.symbol == lt.symbol and clt.getGain() < 0]
         if not matches:
             return
+        # if lt.symbol == 'AAPL120317C00540000':
+        #     print('checkWashBuy', [str(clt) for clt in matches],
+        #           [str(lt) for lt in self.lots[lt.symbol]])
         # print('match1', str(lt), [str(clt) for clt in matches])
         remove = []
         remaining = lt.nshares
         completed = []
+        lt2 = lt
         for clt in matches:
+            lt = lt2
+            # if lt.symbol == 'AAPL120317C00540000':
+            #     print('match', lt.nshares, str(clt), [str(x) for x in self.recent_buys])
             share_gain = clt.getGain() / clt.nshares
             completed.append(clt)
             if clt.nshares <= lt.nshares:
                 self.recent_sells.remove(clt)
                 if clt.nshares < lt.nshares:
                     # The remaining shares stay in recent_buys
-                    lt = self.splitLot(lt, lt.nshares - clt.nshares)
+                    lt, lt2 = self.splitLot(lt, lt.nshares - clt.nshares)
                 else:
                     self.recent_buys.remove(lt)
                 remaining -= clt.nshares
@@ -656,6 +667,11 @@ class Portfolio:
             lt = self.createLot(sym, count, share_price,
                                 share_expense, share_adj, date)
             lots.append(lt)
+            # Need the update here because the previous update didn't do
+            # anything if there were no lots.
+            self.updateLots(sym, lots)
+            # if sym == 'AAPL120317C00540000':
+            #     print('buyShares2a', sym, lots, self.lots[sym])
             self.recent_buys.append(lt)
             self.checkWashBuy(lt)
             # completed = [cl for cl in self.completed_lots
