@@ -229,21 +229,12 @@ class Transaction:
 
     @staticmethod
     def readTransactions(filename, date=None, skip=None):
-        if date is None:
-            date = Transaction.today()
         skip_options = skip == 'options'
-        transactions = []
         with open(filename, encoding='utf-8') as f:
-            for x in f:
-                try:
-                    t = Transaction.parse(x)
-                    if t is None:
-                        continue
-                    if t.date > date:
-                        break
-                    transactions.append(t)
-                except Exception as e:
-                    raise type(e)(str(e) + ' ' + filename)
+            try:
+                transactions = Transaction.read(f, date)
+            except Exception as e:
+                raise type(e)(str(e) + ' ' + filename)
         # transactions.sort(key=lambda t: t.date)
         if skip_options:
             transactions2 = []
@@ -262,6 +253,20 @@ class Transaction:
             transactions = transactions2
             # for t in transactions:
             #     print(Transaction.toDate(t.date).isoformat(), t)
+        return transactions
+
+    @staticmethod
+    def read(file, date=None):
+        if date is None:
+            date = Transaction.today()
+        transactions = []
+        for x in file:
+            t = Transaction.parse(x)
+            if t is None:
+                continue
+            if t.date > date:
+                break
+            transactions.append(t)
         return transactions
 
     @staticmethod
