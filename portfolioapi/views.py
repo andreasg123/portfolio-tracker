@@ -1,17 +1,16 @@
 from collections import defaultdict
 import copy
 import datetime
-from flask import Flask, jsonify, request, Response
+from flask import jsonify, request, Response
 from itertools import groupby
 import json
 import os
 import sys
 import traceback
 
-from portfolio import Portfolio, Transaction, getOptionParameters
-from stockquotes import getQuotes, retrieveQuotes
-
-app = Flask(__name__.split('.')[0])
+from . import app
+from .portfolio import Portfolio, Transaction, getOptionParameters
+from .stockquotes import getQuotes, retrieveQuotes
 
 data_dir = '/var/www/html/portfolio/data'
 api_dir = '/var/www/portfolioapi'

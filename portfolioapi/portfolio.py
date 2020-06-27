@@ -12,7 +12,7 @@ import re
 import sqlite3
 import sys
 
-from stockquotes import getQuotes, getQuoteDates
+from .stockquotes import getQuotes, getQuoteDates
 
 EPOCH = datetime.date(1970, 1, 1)
 LONG_DAYS = 365
