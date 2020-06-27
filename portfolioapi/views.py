@@ -1,21 +1,23 @@
 from collections import defaultdict
 import copy
 import datetime
-from flask import jsonify, request, Response
+from flask import Blueprint, jsonify, request, Response
 from itertools import groupby
 import json
 import os
 import sys
 import traceback
 
-from . import app
 from .portfolio import Portfolio, Transaction, getOptionParameters
 from .stockquotes import getQuotes, retrieveQuotes
 
 data_dir = '/var/www/html/portfolio/data'
 api_dir = '/var/www/portfolioapi'
 
-@app.route('/get-accounts')
+bp = Blueprint('views', __name__)
+
+
+@bp.route('/get-accounts')
 def get_accounts():
     date = request.args.get('date')
     year = request.args.get('year')
@@ -33,7 +35,7 @@ def get_accounts():
     return jsonify(data)
 
 
-@app.route('/get-report')
+@bp.route('/get-report')
 def get_report():
     account = request.args.get('account', 'all')
     date = request.args.get('date')
@@ -101,7 +103,7 @@ def get_report():
     return jsonify(data)
 
 
-@app.route('/get-taxes')
+@bp.route('/get-taxes')
 def get_taxes():
     account = request.args.get('account')
     year = request.args.get('year', str(datetime.date.today().year))
@@ -123,7 +125,7 @@ def get_taxes():
     return jsonify(data)
 
 
-@app.route('/get-annual')
+@bp.route('/get-annual')
 def get_annual():
     try:
         data = get_annual2(request.args.get('account', 'all'),
@@ -199,7 +201,7 @@ def get_annual2(account, year=None, skip=None):
     return data
 
 
-@app.route('/get-spy')
+@bp.route('/get-spy')
 def get_spy():
     spy = set(['SPY'])
     dividends = Transaction.readTransactions(os.path.join(api_dir, 'spy-dividend'))
@@ -219,7 +221,7 @@ def get_spy():
     return jsonify(data)
 
 
-@app.route('/get-options')
+@bp.route('/get-options')
 def get_options():
     account = request.args.get('account')
     date = request.args.get('date', datetime.date.today().isoformat())
@@ -248,7 +250,7 @@ def get_options():
     return jsonify(data)
 
 
-@app.route('/get-history')
+@bp.route('/get-history')
 def get_history():
     account = request.args.get('account')
     start = request.args.get('start', '1970-01-01')
@@ -265,7 +267,7 @@ def get_history():
     return jsonify(data)
 
 
-@app.route('/retrieve-quotes')
+@bp.route('/retrieve-quotes')
 def retrieve_quotes():
     date = Transaction.parseDate(datetime.date.today().isoformat())
     files = Portfolio.get_files(data_dir, 'combined')

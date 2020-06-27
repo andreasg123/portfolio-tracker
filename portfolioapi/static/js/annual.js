@@ -4,6 +4,7 @@ import {
 } from './utils.js';
 import {Polynomial} from './polynomial.js';
 import {ServerError, StockSymbol} from './ui.js';
+import {api_url_prefix} from './api-url.js';
 
 const e = React.createElement;
 
@@ -150,7 +151,7 @@ function renderAnnual([data, names]) {
                   document.getElementById('annual'));
 }
 
-const url = `/portfolioapi/get-annual${window.location.search}`;
-Promise.all([url, '/portfolioapi/get-accounts']
+const url = `${api_url_prefix}get-annual${window.location.search}`;
+Promise.all([url, `${api_url_prefix}get-accounts`]
             .map(u => makeJSONRequest({method: 'GET', url: u})))
   .then(renderAnnual);

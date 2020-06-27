@@ -1,4 +1,5 @@
 import {makeJSONRequest} from './xhr.js';
+import {api_url_prefix} from './api-url.js';
 
 function toDate(d) {
   const values = d.split(/\D/).map(Number);
@@ -72,7 +73,7 @@ function renderChart(data) {
 }
 
 async function loadData() {
-  const url = `/portfolioapi/get-history${window.location.search}`;
+  const url = `${api_url_prefix}get-history${window.location.search}`;
   const data = await makeJSONRequest({url});
   renderChart(data);
 }

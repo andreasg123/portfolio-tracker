@@ -5,6 +5,7 @@ import {
 } from './utils.js';
 import {Polynomial, testPolynomial} from './polynomial.js';
 import {ServerError, StockSymbol} from './ui.js';
+import {api_url_prefix} from './api-url.js';
 
 const e = React.createElement;
 
@@ -555,8 +556,8 @@ function renderReport([data, accounts]) {
 }
 
 async function loadData() {
-  const urls = [`/portfolioapi/get-report${window.location.search}`,
-                `/portfolioapi/get-accounts${window.location.search}`];
+  const urls = [`${api_url_prefix}get-report${window.location.search}`,
+                `${api_url_prefix}get-accounts${window.location.search}`];
   const [data, accounts] = await Promise.all(urls.map(u => makeJSONRequest({url: u})));
   renderReport([data, accounts]);
 }

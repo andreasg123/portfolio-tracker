@@ -4,6 +4,7 @@ import {
   getOptionParameters, isLong, makeCompletedLots
 } from './utils.js';
 import {ServerError, StockSymbol} from './ui.js';
+import {api_url_prefix} from './api-url.js';
 
 const e = React.createElement;
 
@@ -385,8 +386,8 @@ function renderTaxes([data, accounts]) {
 }
 
 async function loadData() {
-  const urls = [`/portfolioapi/get-taxes${window.location.search}`,
-                `/portfolioapi/get-accounts${window.location.search}`];
+  const urls = [`${api_url_prefix}get-taxes${window.location.search}`,
+                `${api_url_prefix}get-accounts${window.location.search}`];
   const params = new URLSearchParams(window.location.search.substring(1));
   if (!params.get('year')) {
     const year = new Date().getFullYear();

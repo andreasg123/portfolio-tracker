@@ -1,4 +1,6 @@
 import os
 import sys
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
-from portfolioapi import app as application
+from portfolioapi import create_app
+
+application = create_app()

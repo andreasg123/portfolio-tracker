@@ -4,6 +4,7 @@ import {
   getOptionParameters
 } from './utils.js';
 import {ServerError, StockSymbol} from './ui.js';
+import {api_url_prefix} from './api-url.js';
 
 const e = React.createElement;
 
@@ -150,6 +151,7 @@ function renderOptions([data, accounts]) {
   ReactDOM.render(e(Options, props), document.getElementById('options'));
 }
 
-const url = `/portfolioapi/get-options${window.location.search}`;
-Promise.all([url, '/portfolioapi/get-accounts'].map(u => makeJSONRequest({method: 'GET', url: u})))
+const urls = [`${api_url_prefix}get-options${window.location.search}`,
+              `${api_url_prefix}get-accounts`];
+Promise.all(urls.map(u => makeJSONRequest({method: 'GET', url: u})))
   .then(renderOptions);
