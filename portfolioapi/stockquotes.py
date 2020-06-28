@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# -*- coding: utf-8 -*-
 
 import bisect
 import csv
@@ -152,6 +153,7 @@ def retrieveQuotes(symbols, force=False):
 
 
 def getQuoteCursor(name):
+    os.makedirs(os.path.dirname(name), exist_ok=True)
     conn = sqlite3.connect(name)
     return conn.cursor()
 
@@ -183,6 +185,7 @@ def storeAllQuotes():
 def getQuotes(d, symbols=None):
     c = getQuoteCursor(quote_db)
     try:
+        createQuoteTable(c)
         c.execute('SELECT MAX(date) FROM quotes WHERE date<=?',
                   [d.isoformat()])
         row = c.fetchone()
@@ -212,6 +215,12 @@ def getQuoteDates(start, end):
                 for x in c.fetchall()]
     finally:
         c.connection.close()
+
+
+def setQuotePaths(dir_path, db_path):
+    global quote_dir, quote_db
+    quote_dir = dir_path
+    quote_db = db_path
 
 
 def main():

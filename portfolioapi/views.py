@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from collections import defaultdict
 import copy
 import datetime
@@ -8,10 +10,9 @@ import os
 import sys
 import traceback
 
-from .portfolio import Portfolio, Transaction, getOptionParameters
+from .portfolio import Portfolio, Transaction, getOptionParameters, data_dir
 from .stockquotes import getQuotes, retrieveQuotes
 
-data_dir = '/var/www/html/portfolio/data'
 api_dir = '/var/www/portfolioapi'
 
 bp = Blueprint('views', __name__)

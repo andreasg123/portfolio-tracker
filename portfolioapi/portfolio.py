@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# -*- coding: utf-8 -*-
 
 from collections import defaultdict
 import copy
@@ -221,9 +222,11 @@ class Transaction:
     @staticmethod
     def getAccounts(path='data'):
         files = []
-        for f in os.listdir(path):
-            if not f.startswith('.') and not f.endswith('~'):
-                files.append(f)
+        with os.scandir(path) as it:
+            for entry in it:
+                n = entry.name
+                if not n.startswith('.') and not n.endswith('~') and entry.is_file():
+                    files.append(n)
         files.sort()
         return files
 
@@ -244,7 +247,7 @@ class Transaction:
                     if isinstance(t, tuple):
                         # print(Transaction.toDate(k), t[0], t[1])
                         q = getQuotes(Transaction.toDate(k), set([t[0].name]))
-                        t[0].amount1 = q[t[0].name]
+                        t[0].amount1 = q.get(t[0].name, 0)
                         transactions2.append(t[0])
                     elif not isOptionSymbol(t.name):
                         # if t.name == 'MA':
@@ -333,6 +336,8 @@ def getOptionPair(symbol):
 
 class Portfolio:
     account_transfers = [('2020-02-18', 'ameritrade', 'ag-broker')]
+    # for testing
+    account_transfers = [('2013-01-01', 'account1', 'account2')]
 
     def __init__(self, date, account=None):
         self.portfolio_date = date
@@ -1227,7 +1232,6 @@ def updateHistory(account, date=None, accounts=[]):
         # Always fill the lots from the beginning.
         start = 0
         for d in quote_dates:
-            print('date', d)
             end = Transaction.fromDate(d)
             portfolio.fillLots([t for t in trans
                                 if t.date > start and t.date <= end])
@@ -1240,7 +1244,6 @@ def updateHistory(account, date=None, accounts=[]):
                              for k, v in portfolio.lots.items())
                          if n]
             positions.sort()
-            print('cash', portfolio.cash, portfolio.cash_like, positions)
             quotes = positions and getQuotes(d, [p[0] for p in positions])
             positions = [(p[0], p[1], quotes.get(p[0], 0)) for p in positions]
             equity = round(sum(p[1] * p[2] for p in positions), 2)
@@ -1269,12 +1272,17 @@ def createPositionsTable(cursor):
                    'deposits REAL, positions TEXT)')
 
 
-def main2():
-    date = Transaction.parseDate(sys.argv[2]) if len(sys.argv) > 2 else Transaction.today()
-    data_dir = 'data'
+def setDataPaths(data_path, cache_path):
+    global data_dir, cache_dir
+    data_dir = data_path
+    cache_dir = cache_path
+
+
+def main2(argv):
+    date = Transaction.parseDate(argv[2]) if len(argv) > 2 else Transaction.today()
     skip = None
     # skip = 'options'
-    files = Portfolio.get_files(data_dir, sys.argv[1], date)
+    files = Portfolio.get_files(data_dir, argv[1], date)
     portfolios = []
     for f in files:
         trans = Transaction.readTransactions(os.path.join(data_dir, f), date, skip=skip)
@@ -1317,11 +1325,15 @@ def main2():
     # print(portfolio.year_dividend)
 
 
-def main():
-    print(Portfolio.getHistory(sys.argv[1],
-                               start=Transaction.fromDate(datetime.date(2020, 3, 30)),
-                               end=Transaction.fromDate(datetime.date(2020, 4, 30)),
-                               include_positions=True)[-1])
+def main(argv):
+    start = argv[2] if len(argv) > 2 else '2020-03-30'
+    end = argv[3] if len(argv) > 3 else '2020-04-30'
+    history = Portfolio.getHistory(argv[1],
+                                   start=Transaction.parseDate(start),
+                                   end=Transaction.parseDate(end),
+                                   include_positions=True)
+    if history:
+        print('last history', history[-1])
     # print(Portfolio.getHistory('ameritrade',
     #                            start=Transaction.fromDate(datetime.date(2020, 1, 1)),
     #                            include_positions=True)[0])
@@ -1332,4 +1344,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main2()
+    main2(sys.argv)
