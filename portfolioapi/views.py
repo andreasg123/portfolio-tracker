@@ -10,10 +10,8 @@ import os
 import sys
 import traceback
 
-from .portfolio import Portfolio, Transaction, getOptionParameters, data_dir
+from .portfolio import Portfolio, Transaction, getOptionParameters, data_dir, cache_dir
 from .stockquotes import getQuotes, retrieveQuotes
-
-api_dir = '/var/www/portfolioapi'
 
 bp = Blueprint('views', __name__)
 
@@ -23,16 +21,12 @@ def get_accounts():
     date = request.args.get('date')
     year = request.args.get('year')
     try:
-        if year:
-            date = year + '-12-31'
-        elif not date:
-            date = datetime.date.today().isoformat()
+        date = get_date(date, year)
         d = Transaction.parseDate(date)
         files = Portfolio.get_files(data_dir, 'all', d)
         data = {'accounts': files}
     except:
-        type, value, tb = sys.exc_info()
-        data = {'error': traceback.format_exception(type, value, tb)}
+        data = format_exception()
     return jsonify(data)
 
 
@@ -43,11 +37,7 @@ def get_report():
     year = request.args.get('year')
     skip = request.args.get('skip')
     try:
-        # raise ValueError('abc')
-        if year:
-            date = year + '-12-31'
-        elif not date:
-            date = datetime.date.today().isoformat()
+        date = get_date(date, year)
         d = Transaction.parseDate(date)
         files = Portfolio.get_files(data_dir, account, d)
         if not account:
@@ -99,8 +89,7 @@ def get_report():
             data['date'] = date
         data['account'] = account
     except:
-        type, value, tb = sys.exc_info()
-        data = {'error': traceback.format_exception(type, value, tb)}
+        data = format_exception()
     return jsonify(data)
 
 
@@ -110,8 +99,7 @@ def get_taxes():
     year = request.args.get('year', str(datetime.date.today().year))
     skip = request.args.get('skip')
     try:
-        # raise ValueError('abc')
-        date = Transaction.parseDate(year + '-12-31')
+        date = Transaction.parseDate(get_date(None, year))
         files = Portfolio.get_files(data_dir, account, date)
         if not account:
             account = files[0]
@@ -121,8 +109,7 @@ def get_taxes():
         data['account'] = account
         data['quotes'] = getQuotes(datetime.date(int(year), 12, 31))
     except:
-        type, value, tb = sys.exc_info()
-        data = {'error': traceback.format_exception(type, value, tb)}
+        data = format_exception()
     return jsonify(data)
 
 
@@ -133,8 +120,7 @@ def get_annual():
                            request.args.get('year'),
                            request.args.get('skip'))
     except:
-        type, value, tb = sys.exc_info()
-        data = {'error': traceback.format_exception(type, value, tb)}
+        data = format_exception()
     return jsonify(data)
 
 
@@ -195,7 +181,7 @@ def get_annual2(account, year=None, skip=None):
     for s in ['SPY', 'QQQ']:
         dividends[s] = [(t.date, t.amount1)
                         for t in Transaction.readTransactions(
-                                os.path.join(api_dir,
+                                os.path.join(cache_dir,
                                              s.lower() + '-dividend'),
                                 skip=skip)]
     data['index_dividends'] = dividends
@@ -205,7 +191,7 @@ def get_annual2(account, year=None, skip=None):
 @bp.route('/get-spy')
 def get_spy():
     spy = set(['SPY'])
-    dividends = Transaction.readTransactions(os.path.join(api_dir, 'spy-dividend'))
+    dividends = Transaction.readTransactions(os.path.join(cache_dir, 'spy-dividend'))
     start_year = 1997
     today = datetime.date.today()
     d = Transaction.parseDate(today.isoformat())
@@ -246,8 +232,7 @@ def get_options():
               for k, g in historical.items()}
         data['historical_quotes'] = hq
     except:
-        type, value, tb = sys.exc_info()
-        data = {'error': traceback.format_exception(type, value, tb)}
+        data = format_exception()
     return jsonify(data)
 
 
@@ -263,8 +248,7 @@ def get_history():
         data = Portfolio.getHistory(account, start, end,
                                     include_positions=include_positions)
     except:
-        type, value, tb = sys.exc_info()
-        data = {'error': traceback.format_exception(type, value, tb)}
+        data = format_exception()
     return jsonify(data)
 
 
@@ -301,6 +285,17 @@ def init_portfolios(date, files, skip=None):
         portfolio.account = f
         portfolios.append(portfolio)
     return portfolios
+
+
+def format_exception():
+    type, value, tb = sys.exc_info()
+    return {'error': traceback.format_exception(type, value, tb)}
+
+
+def get_date(date, year):
+    if year:
+        return year + '-12-31'
+    return date if date else datetime.date.today().isoformat()
 
 
 if __name__ == '__main__':

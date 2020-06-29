@@ -225,7 +225,8 @@ class Transaction:
         with os.scandir(path) as it:
             for entry in it:
                 n = entry.name
-                if not n.startswith('.') and not n.endswith('~') and entry.is_file():
+                if (n != 'transfers' and not n.startswith('.') and
+                    not n.endswith('~') and entry.is_file()):
                     files.append(n)
         files.sort()
         return files
@@ -335,9 +336,7 @@ def getOptionPair(symbol):
 
 
 class Portfolio:
-    account_transfers = [('2020-02-18', 'ameritrade', 'ag-broker')]
-    # for testing
-    account_transfers = [('2013-01-01', 'account1', 'account2')]
+    account_transfers = []
 
     def __init__(self, date, account=None):
         self.portfolio_date = date
@@ -1108,6 +1107,7 @@ class Portfolio:
 
     @staticmethod
     def get_files(data_dir, account, date=None):
+        Portfolio.get_transfers(data_dir)
         if not account:
             files = Transaction.getAccounts(data_dir)[:1]
         elif account == 'combined' or account == 'all':
@@ -1121,6 +1121,19 @@ class Portfolio:
                         if Transaction.parseDate(a[0]) <= date])
             files = [f for f in files if f not in drop]
         return files
+
+    @staticmethod
+    def get_transfers(data_dir):
+        Portfolio.account_transfers = []
+        try:
+            with open(os.path.join(data_dir, 'transfers'),
+                      encoding='utf-8') as f:
+                for x in f:
+                    val = x.split('#', 1)[0].rstrip().split('|')
+                    if len(val) >= 3:
+                        Portfolio.account_transfers.append(val)
+        except FileNotFoundError:
+            pass
 
     @staticmethod
     def readTransfers(date, account, skip=None):
