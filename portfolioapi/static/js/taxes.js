@@ -1,4 +1,3 @@
-import {makeJSONRequest} from './xhr.js';
 import {
   addDays, collectSymbols, formatAmount, formatCount, getLotTotal,
   getOptionParameters, isLong, makeCompletedLots
@@ -395,7 +394,7 @@ async function loadData() {
       urls[i] += `${window.location.search ? '&' : '?'}year=${year}`;
     }
   }
-  const [data, accounts] = await Promise.all(urls.map(u => makeJSONRequest({url: u})));
+  const [data, accounts] = await Promise.all(urls.map(u => fetch(u).then(res => res.json())));
   renderTaxes([data, accounts]);
 }
 

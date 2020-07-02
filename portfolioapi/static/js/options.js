@@ -1,4 +1,3 @@
-import {makeJSONRequest} from './xhr.js';
 import {
   collectSymbols, completeUnrealizedLots, formatAmount, formatCount, getLotTotal,
   getOptionParameters
@@ -151,7 +150,11 @@ function renderOptions([data, accounts]) {
   ReactDOM.render(e(Options, props), document.getElementById('options'));
 }
 
-const urls = [`${api_url_prefix}get-options${window.location.search}`,
-              `${api_url_prefix}get-accounts`];
-Promise.all(urls.map(u => makeJSONRequest({method: 'GET', url: u})))
-  .then(renderOptions);
+async function loadData() {
+  const urls = [`${api_url_prefix}get-options${window.location.search}`,
+                `${api_url_prefix}get-accounts`];
+  const data = await Promise.all(urls.map(u => fetch(u).then(res => res.json())));
+  renderOptions(data);
+}
+
+loadData();

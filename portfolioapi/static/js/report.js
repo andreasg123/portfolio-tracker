@@ -1,4 +1,3 @@
-import {makeJSONRequest} from './xhr.js';
 import {
   collectSymbols, formatAmount, formatCount, formatDuration, getDelta,
   getOptionParameters, groupLots, normalizeDate, getUTC
@@ -558,7 +557,7 @@ function renderReport([data, accounts]) {
 async function loadData() {
   const urls = [`${api_url_prefix}get-report${window.location.search}`,
                 `${api_url_prefix}get-accounts${window.location.search}`];
-  const [data, accounts] = await Promise.all(urls.map(u => makeJSONRequest({url: u})));
+  const [data, accounts] = await Promise.all(urls.map(u => fetch(u).then(res => res.json())));
   renderReport([data, accounts]);
 }
 

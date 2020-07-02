@@ -1,4 +1,3 @@
-import {makeJSONRequest} from './xhr.js';
 import {api_url_prefix} from './api-url.js';
 
 function toDate(d) {
@@ -74,7 +73,8 @@ function renderChart(data) {
 
 async function loadData() {
   const url = `${api_url_prefix}get-history${window.location.search}`;
-  const data = await makeJSONRequest({url});
+  const res = await fetch(url);
+  const data = await res.json();
   renderChart(data);
 }
 

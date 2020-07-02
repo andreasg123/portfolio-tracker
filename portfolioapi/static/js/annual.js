@@ -1,4 +1,3 @@
-import {makeJSONRequest} from './xhr.js';
 import {
   formatAmount
 } from './utils.js';
@@ -151,7 +150,11 @@ function renderAnnual([data, names]) {
                   document.getElementById('annual'));
 }
 
-const url = `${api_url_prefix}get-annual${window.location.search}`;
-Promise.all([url, `${api_url_prefix}get-accounts`]
-            .map(u => makeJSONRequest({method: 'GET', url: u})))
-  .then(renderAnnual);
+async function loadData() {
+  const urls = [`${api_url_prefix}get-annual${window.location.search}`,
+                `${api_url_prefix}get-accounts`];
+  const data = await Promise.all(urls.map(u => fetch(u).then(res => res.json())));
+  renderAnnual(data);
+}
+
+loadData();
