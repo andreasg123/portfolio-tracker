@@ -1244,6 +1244,7 @@ def updateHistory(account, date=None, accounts=[]):
                                     Transaction.toDate(date))
         # Always fill the lots from the beginning.
         start = 0
+        quotes = {}
         for d in quote_dates:
             end = Transaction.fromDate(d)
             portfolio.fillLots([t for t in trans
@@ -1257,7 +1258,8 @@ def updateHistory(account, date=None, accounts=[]):
                              for k, v in portfolio.lots.items())
                          if n]
             positions.sort()
-            quotes = positions and getQuotes(d, [p[0] for p in positions])
+            # Use quotes from previous days if current quotes are missing
+            quotes.update(getQuotes(d, [p[0] for p in positions] if positions else {}))
             positions = [(p[0], p[1], quotes.get(p[0], 0)) for p in positions]
             equity = round(sum(p[1] * p[2] for p in positions), 2)
             cash = round(portfolio.cash + portfolio.cash_like, 2)

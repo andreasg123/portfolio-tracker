@@ -118,7 +118,10 @@ def retrieveJsonQuotes(symbols):
 
 
 def retrieveQuotes(symbols, force=False):
-    ds = datetime.date.today().isoformat()
+    d = datetime.date.today()
+    if d in getHolidays(d.year):
+        return
+    ds = d.isoformat()
     quote_path = os.path.join(quote_dir, '{0}.csv'.format(ds))
     if not force and os.path.exists(quote_path):
         return
@@ -221,6 +224,57 @@ def setQuotePaths(dir_path, db_path):
     global quote_dir, quote_db
     quote_dir = dir_path
     quote_db = db_path
+
+
+def getEaster(year):
+    # https://code.activestate.com/recipes/576517-calculate-easter-western-given-a-year/
+    # https://www.drupal.org/project/nameday/issues/1180480
+    a = year % 19
+    b = year // 100
+    c = year % 100
+    d = (19 * a + b - b // 4 - ((b - (b + 8) // 25 + 1) // 3) + 15) % 30
+    e = (32 + 2 * (b % 4) + 2 * (c // 4) - d - (c % 4)) % 7
+    f = d + e - 7 * ((a + 11 * d + 22 * e) // 451) + 114
+    month = f // 31
+    day = f % 31 + 1
+    return datetime.date(year, month, day)
+
+
+def getWeekday(date, earlier=True):
+    w = date.weekday()
+    if w < 5:
+        return date
+    elif w == 6:
+        return date + datetime.timedelta(days=1)
+    elif earlier:
+        return date - datetime.timedelta(days=1)
+    else:
+        return None
+
+
+def getHolidays(year):
+    # New Year's Day: Jan 1  +1
+    # Martin Luther King, Jr. Day: third Monday in January
+    # Presidents' Day: third Monday in February
+    # Good Friday: 2 days before Easter
+    # Memorial Day: last Monday in May
+    # Independence Day: Jul 4  +/- 1
+    # Labor Day: first Monday in September
+    # Thanksgiving: fourth Thursday in November
+    # Christmas: Dec 25 +/- 1
+    holidays = [getEaster(year) - datetime.timedelta(days=2)]
+    for m, d in [(1, 1), (7, 4), (12, 25)]:
+        x = getWeekday(datetime.date(year, m, d), m != 1)
+        if x is not None:
+            holidays.append(x)
+    x = datetime.date(year, 5, 31)
+    holidays.append(x - datetime.timedelta(days=x.weekday()))
+    for m, w, c in [(1, 0, 3), (2, 0, 3), (9, 0, 1), (11, 3, 4)]:
+        x = datetime.date(year, m, 1)
+        days = (w + 7 - x.weekday()) % 7 + (c - 1) * 7
+        holidays.append(x + datetime.timedelta(days=days))
+    holidays.sort()
+    return holidays
 
 
 def main():
