@@ -28,12 +28,6 @@ quote_headers = [
 ]
 
 
-json_quote_fields = [
-    'symbol',
-    'regularMarketPrice'
-]
-
-
 def parseQuote(s):
     if len(s) < 55 or s.startswith('Ticker') or s.startswith('------'):
         return None
@@ -95,8 +89,9 @@ def extractJsonQuotes(f):
     data = json.load(f)
     #print(data)
     f.close()
-    return [[q.get(n, 0.0) for n in json_quote_fields]
-            for q in data['quoteResponse']['result']]
+    return [[q['symbol'], q['regularMarketPrice']]
+            for q in data['quoteResponse']['result']
+            if q.get('regularMarketPrice', 0.0) != 0.0]
 
 
 def retrieveJsonQuotes(symbols):
