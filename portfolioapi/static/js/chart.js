@@ -1,5 +1,31 @@
 import {api_url_prefix} from './api-url.js';
 
+const e = React.createElement;
+
+function ChartTocEntry(props) {
+  const suffix = '\u00a0 ';     // '&nbsp; '
+  if (props.selected)
+    return e(React.Fragment, {}, e('b', {}, props.account), suffix);
+  let url = `?account=${props.account}`;
+  if (props.start) {
+    url += `&start=${props.start}`;
+  }
+  if (props.end) {
+    url += `&end=${props.end}`;
+  }
+  return e(React.Fragment, {}, e('a', {href: url}, props.account), suffix);
+}
+
+function ChartToc(props) {
+  console.log('ChartToc', props);
+  const account_entries = props.accounts.map(a => e(ChartTocEntry, {
+    account: a,
+    start: props.start,
+    end: props.end,
+    selected: a === props.account}));
+  return e(React.Fragment, {}, ...account_entries);
+}
+
 function toDate(d) {
   const values = d.split(/\D/).map(Number);
   values[1]--;
@@ -41,7 +67,13 @@ function addData(svg, data, color) {
         .attr('d', d3.line());
 }
 
-function renderChart(data) {
+function renderToc(accounts, account, start, end) {
+  const container = document.getElementById('toc');
+  ReactDOM.render(e(ChartToc, {account, accounts, start, end}), container);
+}
+
+function renderChart([data, accounts, account, start, end]) {
+  renderToc(accounts.accounts, account, start, end);
   const min_y = data.reduce((min_y, d) => Math.min(
     min_y, Math.min(d.deposits, d.equity + d.cash)), Number.MAX_VALUE);
   const max_y = data.reduce((max_y, d) => Math.max(
@@ -72,10 +104,14 @@ function renderChart(data) {
 }
 
 async function loadData() {
-  const url = `${api_url_prefix}get-history${window.location.search}`;
-  const res = await fetch(url);
-  const data = await res.json();
-  renderChart(data);
+  const urls = [`${api_url_prefix}get-history${window.location.search}`,
+                `${api_url_prefix}get-accounts`];
+  const params = new URLSearchParams(window.location.search.substring(1));
+  const account = params.get('account');
+  const start = params.get('start');
+  const end = params.get('end');
+  const [data, accounts] = await Promise.all(urls.map(u => fetch(u).then(res => res.json())));
+  renderChart([data, accounts, account, start, end]);
 }
 
 loadData();

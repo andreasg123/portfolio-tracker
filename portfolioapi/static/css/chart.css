@@ -1,5 +1,6 @@
 body {
     font-family: Arial, Helvetica, sans-serif;
+    font-size: 90%;
 }
 
 .axis path,
@@ -27,4 +28,11 @@ body {
 
 text {
     font: 10px sans-serif;
+}
+#toc {
+    font-size: 80%;
+    margin-bottom: 1em;
+}
+a {
+  color: black;
 }

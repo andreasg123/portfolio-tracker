@@ -7,8 +7,15 @@
 <link rel="stylesheet" type="text/css" href="css/chart.css"/>
 </head>
 <body>
+<div id="toc"></div>
+
 <div id="chart"></div>
 
+<!-- Load React. -->
+<!-- Note: when deploying, replace "development.js" with "production.min.js". -->
+<script src="https://unpkg.com/react@16/umd/react.development.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@16/umd/react-dom.development.js" crossorigin></script>
+<!-- D3 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.15.0/d3.min.js" crossorigin></script>
 <script src="js/chart.js" type="module" crossorigin></script>
 </body>
