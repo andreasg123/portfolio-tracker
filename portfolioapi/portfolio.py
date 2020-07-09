@@ -17,7 +17,7 @@ from .stockquotes import getQuotes, getQuoteDates
 
 EPOCH = datetime.date(1970, 1, 1)
 LONG_DAYS = 365
-cash_like = set(['SWVXX'])
+cash_like = set(['SWVXX', 'FZCXX', 'MIP CL 1'])
 data_dir = '/var/www/html/portfolio/data'
 cache_dir = '/var/www/portfolioapi/cache'
 
@@ -422,6 +422,9 @@ class Portfolio:
         clt2.nshares = clt.nshares - nshares
         clt.nshares = nshares
         self.completed_lots.insert(self.completed_lots.index(clt) + 1, clt2)
+        idx = self.recent_sells.index(clt)
+        if idx >= 0:
+            self.recent_sells.insert(idx + 1, clt2)
         return clt2
 
     def sellLot(self, lt, sold_shares, share_price, share_expense, share_adj,
@@ -439,7 +442,7 @@ class Portfolio:
         self.completed_lots.append(clt)
         self.recent_sells.append(clt)
         lt.nshares -= current_shares
-        if lt.nshares < 0.0001:
+        if lt.nshares < 0.001:
             lt.nshares = 0
         adjustDividends(lt.dividends, factor)
         adjustDividends(lt.return_of_capital, factor)
@@ -1035,7 +1038,7 @@ class Portfolio:
     def getCurrentSymbols(self):
         symbols = set(s for k, v in self.lots.items()
                       if v for s in getOptionPair(k))
-        if self.cash_like:
+        if False and self.cash_like:
             # for report.cgi
             symbols |= cash_like
         return sorted(symbols)

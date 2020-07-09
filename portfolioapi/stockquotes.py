@@ -120,6 +120,7 @@ def retrieveQuotes(symbols, force=False):
     quote_path = os.path.join(quote_dir, '{0}.csv'.format(ds))
     if not force and os.path.exists(quote_path):
         return
+    symbols = [s for s in symbols if not ' ' in s]
     stocks = []
     options = []
     today = datetime.date.today().strftime('%y%m%d')
