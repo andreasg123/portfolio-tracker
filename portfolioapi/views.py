@@ -49,23 +49,27 @@ def get_report():
         all_deposits = []
         data = {}
         quote_splits = {}
+        year_quote_splits = {}
         portfolios = init_portfolios(d, files, skip=skip)
         share_diffs = []
+        # TODO: if a stock changes its symbol during the year, the year-end
+        # quote for the old symbol has to be included.
         for p in portfolios:
             share_diff = defaultdict(float)
             share_diffs.append(share_diff)
             for t in p.transactions:
-                if t.date != d or t.is_cash_like():
+                if t.date <= prev_year_end or t.is_cash_like():
+                    continue
+                if t.type == 'x' and (not t.name2 or t.name2 == t.name):
+                    year_quote_splits[t.name] = 1 / (1 + t.amount1)
+                    if t.date == d:
+                        quote_splits[t.name] = 1 / (1 + t.amount1)
+                elif t.date != d:
                     continue
                 if t.type == 'b':
                     share_diff[t.name] += t.count
                 elif t.type == 's':
                     share_diff[t.name] -= t.count
-                elif (t.name not in quote_splits and t.type == 'x' and
-                      (not t.name2 or t.name2 == t.name)):
-                    # TODO: prev_year_end also needs to be checked for year
-                    # quotes
-                    quote_splits[t.name] = 1 / (1 + t.amount1)
         if account == 'combined':
             share_diff = defaultdict(float)
             for sd in share_diffs:
@@ -80,16 +84,18 @@ def get_report():
         data['quotes'] = getQuotes(Transaction.toDate(d), symbols)
         old_quotes = getQuotes(Transaction.toDate(d - 1), symbols)
         year_quotes = getQuotes(Transaction.toDate(prev_year_end), symbols)
-        data['oldquotes'] = old_quotes
-        data['yearquotes'] = year_quotes
         for k, v in quote_splits.items():
             try:
                 old_quotes[k] *= v
-                # TODO: This only works for a split on the current day.  Splits
-                # for the YTD need to be considered.
+            except KeyError:
+                pass
+        for k, v in year_quote_splits.items():
+            try:
                 year_quotes[k] *= v
             except KeyError:
                 pass
+        data['oldquotes'] = old_quotes
+        data['yearquotes'] = year_quotes
         for i, p in enumerate(portfolios):
             share_diff = share_diffs[i]
             for k, v in share_diff.items():

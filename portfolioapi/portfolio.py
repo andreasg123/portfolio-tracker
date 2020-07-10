@@ -482,67 +482,6 @@ class Portfolio:
             except KeyError:
                 pass
 
-    # def adjustWashSaleLot(self, lt, clt, days):
-    #     # print('adjustWashSaleLot', str(clt), days)
-    #     ns = min(clt.nshares - clt.wash_shares, lt.nshares)
-    #     if ns <= 0:
-    #         return None
-    #     gain = clt.getGain()
-    #     ws = math.ceil(100 * ns * (-gain - clt.wash_sale) /
-    #                    (clt.nshares - clt.wash_shares)) * 0.01
-    #     lt2 = None
-    #     if ns < lt.nshares:
-    #         lt2 = copy.deepcopy(lt)
-    #         lt2.nshares -= ns
-    #         factor = ns / lt.nshares
-    #         adjustDividends(lt2.dividends, 1 - factor)
-    #         adjustDividends(lt2.return_of_capital, 1 - factor)
-    #         adjustDividends(lt.dividends, factor)
-    #         adjustDividends(lt.return_of_capital, factor)
-    #         lt.nshares = ns
-    #     lt.dividends += [Dividend(d.date, d.amount * ns / clt.nshares)
-    #                     for d in clt.dividends]
-    #     lt.purchase_date -= clt.end_date - clt.start_date
-    #     lt.share_adj += ws / ns
-    #     clt.wash_sale += ws
-    #     clt.wash_shares += ns
-    #     clt.wash_days.append(days)
-    #     # print(clt.wash_days)
-    #     return lt2
-
-    # def adjustWashSaleAfter(self, lots, completed):
-    #     # print('adjustWashSaleAfter', [str(cl) for cl in completed])
-    #     used_lots = []
-    #     for cl in completed:
-    #         if cl.getGain() < 0:
-    #             remaining_lots = []
-    #             for lt in lots:
-    #                 if cl.end_date - lt.purchase_date <= 30:
-    #                     lt2 = self.adjustWashSaleLot(lt, cl, cl.end_date - lt.purchase_date)
-    #                     if lt2:
-    #                         remaining_lots.append(lt2)
-    #                     used_lots.append(lt)
-    #                 else:
-    #                     remaining_lots.append(lt)
-    #             lots = remaining_lots
-    #     lots += used_lots
-    #     lots.sort(key=lambda lt: lt.purchase_date)
-    #     return lots
-
-    # def adjustWashSaleBefore(self, lots, completed, date):
-    #     # print('adjustWashSaleBefore', [str(cl) for cl in completed])
-    #     lt = lots.pop()
-    #     for cl in completed:
-    #         lt2 = self.adjustWashSaleLot(lt, cl, Transaction.toDate(date))
-    #         lots.append(lt)
-    #         if lt2:
-    #             lt = lt2
-    #         else:
-    #             break
-    #     lots.sort(key=lambda lt: lt.purchase_date)
-    #     # print([(str(lt), Transaction.toDate(lt.purchase_date)) for lt in lots])
-    #     return lots
-
     def checkWashSell(self, completed):
         completed = [clt for clt in completed if clt.getGain() < 0]
         if not completed:
@@ -552,7 +491,9 @@ class Portfolio:
         #     print('checkWashSell', [str(clt) for clt in completed])
         found = False
         for clt in completed:
-            matches = [lt for lt in self.recent_buys if lt.symbol == sym]
+            matches = [lt for lt in self.recent_buys
+                       if lt.symbol == sym and
+                       lt.purchase_date != clt.start_date]
             if not matches:
                 break
             found = True
@@ -584,7 +525,8 @@ class Portfolio:
 
     def checkWashBuy(self, lt):
         matches = [clt for clt in self.recent_sells
-                   if clt.symbol == lt.symbol and clt.getGain() < 0]
+                   if clt.symbol == lt.symbol and
+                   clt.start_date != lt.purchase_date and clt.getGain() < 0]
         if not matches:
             return
         # if lt.symbol == 'AAPL120317C00540000':
