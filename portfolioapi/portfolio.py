@@ -247,7 +247,8 @@ class Transaction:
                 for t in group:
                     if isinstance(t, tuple):
                         # print(Transaction.toDate(k), t[0], t[1])
-                        q = getQuotes(Transaction.toDate(k), set([t[0].name]))
+                        q = getQuotes(Transaction.toDate(k), set([t[0].name]),
+                                      same_day=True)
                         t[0].amount1 = q.get(t[0].name, 0)
                         transactions2.append(t[0])
                     elif not isOptionSymbol(t.name):
@@ -1234,6 +1235,8 @@ def updateHistory(account, date=None, accounts=[]):
         portfolio.account = account
         createPositionsTable(c)
         trans = Transaction.readTransactions(os.path.join(data_dir, account), date)
+        if not trans:
+            return
         start = trans[0].date
         if accounts:
             start = min(start, min(a[2][0].date for a in accounts))
@@ -1262,7 +1265,8 @@ def updateHistory(account, date=None, accounts=[]):
                          if n]
             positions.sort()
             # Use quotes from previous days if current quotes are missing
-            quotes.update(getQuotes(d, [p[0] for p in positions] if positions else {}))
+            quotes.update(getQuotes(d, [p[0] for p in positions] if positions
+                                    else {}, same_day=True))
             positions = [(p[0], p[1], quotes.get(p[0], 0)) for p in positions]
             equity = round(sum(p[1] * p[2] for p in positions), 2)
             cash = round(portfolio.cash + portfolio.cash_like, 2)

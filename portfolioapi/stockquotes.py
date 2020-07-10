@@ -181,25 +181,41 @@ def storeAllQuotes():
         c.connection.close()
 
 
-def getQuotes(d, symbols=None):
+def getQuotes(d, symbols=None, same_day=False):
+    d = d.isoformat()
     c = getQuoteCursor(quote_db)
     try:
         createQuoteTable(c)
-        c.execute('SELECT MAX(date) FROM quotes WHERE date<=?',
-                  [d.isoformat()])
+        c.execute('SELECT MAX(date) FROM quotes WHERE date<=?', [d])
         row = c.fetchone()
         if row is None:
             return {}
+        d = row[0]
         if symbols:
             # Handle set
             symbols = list(symbols)
             c.execute('SELECT symbol,quote FROM quotes '
                       'WHERE date=? AND symbol IN ({0})'
                       .format(','.join(['?'] * len(symbols))),
-                      [row[0]] + symbols)
+                      [d] + symbols)
+            quotes = dict(c.fetchall())
+            if same_day:
+                return quotes
+            symbols = [s for s in symbols if s not in quotes]
+            if symbols:
+                c.execute('SELECT quotes.symbol,quote FROM quotes JOIN '
+                          '(SELECT symbol,MAX(date) AS date FROM quotes '
+                          'WHERE date<=? AND symbol IN ({0}) '
+                          'GROUP BY symbol) AS recent '
+                          'ON quotes.symbol=recent.symbol '
+                          'AND quotes.date=recent.date'
+                          .format(','.join(['?'] * len(symbols))),
+                          [d] + symbols)
+                quotes.update(dict(c.fetchall()))
+            return quotes
         else:
-            c.execute('SELECT symbol,quote FROM quotes WHERE date=?', [row[0]])
-        return dict(c.fetchall())
+            c.execute('SELECT symbol,quote FROM quotes WHERE date=?', [d])
+            return dict(c.fetchall())
     finally:
         c.connection.close()
 

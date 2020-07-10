@@ -39,6 +39,8 @@ def get_report():
     try:
         date = get_date(date, year)
         d = Transaction.parseDate(date)
+        year = Transaction.toYear(d)
+        prev_year_end = Transaction.fromYearEnd(year - 1)
         files = Portfolio.get_files(data_dir, account, d)
         if not account:
             account = files[0]
@@ -46,14 +48,12 @@ def get_report():
         all_lots = []
         all_deposits = []
         data = {}
-        data['quotes'] = getQuotes(Transaction.toDate(d))
-        data['oldquotes'] = getQuotes(Transaction.toDate(d - 1))
-        data['yearquotes'] = getQuotes(datetime.date(Transaction.toYear(d) - 1,
-                                                     12, 31))
-        quote_splits = set()
+        quote_splits = {}
         portfolios = init_portfolios(d, files, skip=skip)
+        share_diffs = []
         for p in portfolios:
             share_diff = defaultdict(float)
+            share_diffs.append(share_diff)
             for t in p.transactions:
                 if t.date != d or t.is_cash_like():
                     continue
@@ -63,13 +63,35 @@ def get_report():
                     share_diff[t.name] -= t.count
                 elif (t.name not in quote_splits and t.type == 'x' and
                       (not t.name2 or t.name2 == t.name)):
-                    try:
-                        quote_splits.add(t.name)
-                        data['oldquotes'][t.name] /= (1 + t.amount1)
-                    except KeyError:
-                        pass
-            # print(share_diff)
-            # print({k: data['oldquotes'].get(k) for k in share_diff})
+                    # TODO: prev_year_end also needs to be checked for year
+                    # quotes
+                    quote_splits[t.name] = 1 / (1 + t.amount1)
+        if account == 'combined':
+            share_diff = defaultdict(float)
+            for sd in share_diffs:
+                for k, v in sd.items():
+                    share_diff[k] += v
+            share_diffs = [share_diff]
+            portfolios = [Portfolio.combine(portfolios)]
+            account_portfolios = {account: portfolios[0]}
+        else:
+            account_portfolios = {p.account: p for p in portfolios}
+        symbols = set([s for p in portfolios for s in p.getCurrentSymbols()])
+        data['quotes'] = getQuotes(Transaction.toDate(d), symbols)
+        old_quotes = getQuotes(Transaction.toDate(d - 1), symbols)
+        year_quotes = getQuotes(Transaction.toDate(prev_year_end), symbols)
+        data['oldquotes'] = old_quotes
+        data['yearquotes'] = year_quotes
+        for k, v in quote_splits.items():
+            try:
+                old_quotes[k] *= v
+                # TODO: This only works for a split on the current day.  Splits
+                # for the YTD need to be considered.
+                year_quotes[k] *= v
+            except KeyError:
+                pass
+        for i, p in enumerate(portfolios):
+            share_diff = share_diffs[i]
             for k, v in share_diff.items():
                 try:
                     # equity_diff only represents sales.  Quote changes are
@@ -77,10 +99,6 @@ def get_report():
                     p.equity_diff += v * data['oldquotes'][k]
                 except KeyError:
                     pass
-        if account == 'combined':
-            account_portfolios = {account: Portfolio.combine(portfolios)}
-        else:
-            account_portfolios = {p.account: p for p in portfolios}
         data['accounts'] = {k: v.toDict(year=year)
                             for k, v in account_portfolios.items()}
         if year:
