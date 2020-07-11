@@ -84,12 +84,13 @@ directory described by the variable `quote_dir` in
 [stockquotes.py](./portfolioapi/stockquotes.py).  In addition, those quotes are
 stored in the SQLite database at the variable `quote_db` in
 [stockquotes.py](./portfolioapi/stockquotes.py).  After making changes to the
-text files containing stock quotes, the database may be deleted to be
-repopulated by running `python3 stockquotes.py`.
+text files containing stock quotes, the database needs to be repopulated by
+accessing `/update-quotes`.
 
 For historical charts of accounts, SQLite databases are stored in `cache_dir`
 in [portfolio.py](./portfolioapi/portfolio.py).  If retroactive changes are
-made in an account text file, the corresponding database has to be deleted.
+made in an account text file, the corresponding database has to be cleared by
+accessing `/clear-history?account=xyz`.
 
 
 Import from Brokerage Accounts
@@ -145,3 +146,25 @@ On a Linux server or Mac, this can be done with a cron job (shown as Pacific
 Time):
 
     0,30 15-16 * * 1-5 curl -s -n http://localhost/portfolioapi/retrieve-quotes > /dev/null
+
+
+Updating Databases
+------------------
+
+Databases are used to store stock quotes and account histories.  There are
+several URLs that update databases.
+
+* `/retrieve-quotes`: Accesses a financial service to retrieve end-of-day stock
+  quotes for the current holdings.  As the quotes are retrieved only once per
+  day, they can be forced to run again, e.g., after more transactions were
+  entered, by appending the parameter `?force=true`.  This URL is linked from
+  the report page as "force quotes".
+
+* `/update-quotes`: Repopulates the quotes database, e.g., after quotes for
+  previous days were added manually to the CSV files.  For quotes spanning many
+  years, this may take 30 seconds.  This also clears the history for all
+  accounts.
+
+* `/clear-history?account=xyz`: Clears the stored history for the account
+  `xyz`, e.g., after editing past transactions.  If the account is `all`,
+  history for all accounts is cleared.

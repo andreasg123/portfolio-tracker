@@ -1142,6 +1142,21 @@ class Portfolio:
                  for i, c in enumerate(columns)}
                 for r in rows]
 
+    @staticmethod
+    def clearHistory(account):
+        if account == 'all':
+            accounts = [x[:-3] for x in os.listdir(cache_dir)
+                        if x != 'quotes.db' and x.endswith('.db')]
+            print(accounts)
+        else:
+            accounts = [a[1] for a in Portfolio.account_transfers
+                        if a[2] == account]
+            accounts.append(account)
+        for a in accounts:
+            path = os.path.join(cache_dir, '{0}.db'.format(a))
+            if os.path.exists(path):
+                dropPositionsTable(getCursor(path))
+
 
 def mergeHistoryEntries(entries):
     # date, equity, cash, deposits, positions
@@ -1234,6 +1249,10 @@ def createPositionsTable(cursor):
     cursor.execute('CREATE TABLE IF NOT EXISTS positions '
                    '(date INTEGER PRIMARY KEY, equity REAL, cash REAL, '
                    'deposits REAL, positions TEXT)')
+
+
+def dropPositionsTable(cursor):
+    cursor.execute('DROP TABLE IF EXISTS positions')
 
 
 def setDataPaths(data_path, cache_path):

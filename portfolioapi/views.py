@@ -11,7 +11,7 @@ import sys
 import traceback
 
 from .portfolio import Portfolio, Transaction, getOptionParameters, data_dir, cache_dir
-from .stockquotes import getQuotes, retrieveQuotes
+from .stockquotes import getQuotes, retrieveQuotes, storeAllQuotes
 
 bp = Blueprint('views', __name__)
 
@@ -278,6 +278,13 @@ def get_history():
     return jsonify(data)
 
 
+@bp.route('/clear-history')
+def clear_history():
+    account = request.args.get('account')
+    Portfolio.clearHistory(account)
+    return Response('ok\n', mimetype='text/plain')
+
+
 @bp.route('/retrieve-quotes')
 def retrieve_quotes():
     date = Transaction.parseDate(datetime.date.today().isoformat())
@@ -286,6 +293,14 @@ def retrieve_quotes():
     force = request.args.get('force') == 'true'
     retrieveQuotes(portfolio.getCurrentSymbols(), force=force)
     return Response('ok\n', mimetype='text/plain')
+
+
+@bp.route('/update-quotes')
+def update_quotes():
+    Portfolio.clearHistory('all')
+    storeAllQuotes()
+    return Response('ok\n', mimetype='text/plain')
+
 
 
 def init_portfolios(date, files, skip=None):

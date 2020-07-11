@@ -61,3 +61,21 @@ but those need to be in chronological order.  It is recommended to make the
 alphabetical order of the downloaded files match the chronological order, e.g.,
 by appending year and start month at the end of each file name.  Otherwise, the
 script is straightforward and no manual adjustments should be needed.
+
+
+Quicken
+-------
+
+Stock quotes may be imported from Quicken.  Both CSV and QIF format can be
+read by the script [import-quotes-quicken.py](./import-quotes-quicken.py):
+
+    ./import-quotes-quicken.py security1.qif security2.qif
+
+The subdirectory `quotes` will be used to store the quote files.  This should
+be symlinked to the correct location described by the variable `quote_dir` in
+[stockquotes.py](../portfolioapi/stockquotes.py).  Dates for which the quote
+file exists before the import is started will be ignored.  To import all data,
+existing quote files should be deleted first.
+
+After stock quotes are imported, the quote database needs to be updated by
+accessing the URL `/update-quotes`.
