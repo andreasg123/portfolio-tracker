@@ -92,6 +92,14 @@ in [portfolio.py](./portfolioapi/portfolio.py).  If retroactive changes are
 made in an account text file, the corresponding database has to be deleted.
 
 
+Import from Brokerage Accounts
+------------------------------
+
+Brokerage firms may offer the means to download transactions in the CSV
+format.  Various scripts in [ingest](./ingest) can convert those files at least
+partially to the required format.
+
+
 Usage
 -----
 
