@@ -39,8 +39,8 @@ def get_report():
     try:
         date = get_date(date, year)
         d = Transaction.parseDate(date)
-        year = Transaction.toYear(d)
-        prev_year_end = Transaction.fromYearEnd(year - 1)
+        y = Transaction.toYear(d)
+        prev_year_end = Transaction.fromYearEnd(y - 1)
         files = Portfolio.get_files(data_dir, account, d)
         if not account:
             account = files[0]
@@ -214,13 +214,15 @@ def get_annual2(account, year=None, skip=None):
 
 @bp.route('/get-spy')
 def get_spy():
+    end = request.args.get('end', datetime.date.today().isoformat())
     spy = set(['SPY'])
     dividends = Transaction.readTransactions(os.path.join(cache_dir, 'spy-dividend'))
     start_year = 1997
     today = datetime.date.today()
-    d = Transaction.parseDate(today.isoformat())
+    d = Transaction.parseDate(end)
+    next_year = Transaction.toYear(d) + 1
     years = []
-    for y in range(start_year, today.year + 1):
+    for y in range(start_year, next_year):
         end = min(d, Transaction.fromYearEnd(y))
         year = {}
         year['end'] = end

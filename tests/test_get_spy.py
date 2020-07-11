@@ -5,7 +5,7 @@ import os
 
 
 def test_get_history(client):
-    response = client.get('/get-spy')
+    response = client.get('/get-spy?end=2020-06-29')
     with open(os.path.join(os.path.dirname(__file__),
                            'get_spy.json')) as f:
         expected = json.load(f)

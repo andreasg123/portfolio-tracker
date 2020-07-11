@@ -210,8 +210,8 @@ class Transaction:
             t.amount2 = float(val[5]) if len(val) > 5 else 0
         elif t.type == 'c':
             # change
-            t.name2 = val[3]
-            t.count = float(val[4]) if len(val) > 4 else 1
+            t.count = float(val[3])
+            t.name2 = val[4]
             if len(val) > 6:
                 # cash per share
                 t.amount1 = float(val[5])
