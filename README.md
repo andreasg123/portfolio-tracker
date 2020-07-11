@@ -16,6 +16,49 @@ options, stock splits and spin-offs, cash in lieu of fractional shares,
 dividends, return of capital, etc.  More esoteric transactions may require some
 creativity to make them fit the provided transaction types.
 
+The import scripts treat fees as negative dividends to reflect the impact on
+the performance of the stock or mutual fund.  In mutual funds, such fees are
+usually covered by reducing the number of shared held.  In such cases, import
+scripts create two transactions, a negative dividend followed by a sale of the
+appropriate number of shares.  Cash in lieu of fractional shares is also
+expressed as a sale.
+
+
+Usage
+-----
+
+First, you need to enter or import equity transactions for one or more
+accounts.  Those go into text files in the directory `portfolioapi/data` that
+needs to be created.  See below for the data format
+([samples](./tests/data/account2)).
+
+Stock quotes may be retrieved from a financial service by accessing the URL
+`/retrieve-quotes`.  They may also be imported from Quicken CSV or QIF files.
+
+Flask may run the app locally.  After installing Flask, you can run this
+command in a bash Terminal:
+
+    FLASK_APP=portfolioapi flask run
+
+In Windows, you can set the environment variable `FLASK_APP=portfolioapi` and
+do the same in a Command Prompt or Powershell.
+
+Now, you can open this page in a web browser:
+`http://127.0.0.1:5000/static/report.html`
+
+If you have access to a web server running Apache, you can configure
+[mod_wsgi](https://modwsgi.readthedocs.io/) using the [sample
+configuration](./sample-mod_wsgi.conf).
+
+While you can access the pages as
+`https://server/portfolioapi/static/report.html`, it is preferable to have
+Apache serve the static pages.  That requires configuring Apache to serve the
+content of [portfolioapi/static](./portfolioapi/static), maybe after copying it
+elsewhere.  The file [api-url.js](./portfolioapi/static/js/api-url.js) needs to
+be edited.  For the sample configuration, it should have this content:
+
+    export const api_url_prefix = '/portfolioapi/';
+
 
 Displays
 --------
@@ -66,12 +109,21 @@ There are multiple HTML files:
 Data Files
 ----------
 
-The transactions of each brokerage account are described in a text file named
-as the nickname of the account.  Those files are stored in the directory
-indicated by the variable `data_dir` in
-[portfolio.py](./portfolioapi/portfolio.py).  The [format of those
-files](./doc/account.md) uses vertical bars as separators.  Examples can be
-found amoung the [tests](./tests/data/account2).
+By default, all data files are stored in the subdirectories `data`, `cache`,
+and `quotes` of the directory [portfolioapi](./portfolio/).  Other than the
+`data` directory, those directories are created automatically if the do not
+exist.  If those directories should be elsewhere, it is easiest to symlink to
+the desired location.  Otherwise, variables at the top of
+[portfolio.py](./portfolioapi/portfolio.py) and
+[stockquotes.py](./portfolioapi/stockquotes.py) may be changed.  Other than the
+`data` directory, the directories need to be writable by the user ID running
+the web server.
+
+The transactions of each brokerage account are described in a text file in the
+`data` directory named as the nickname of the account (without a file
+extension).  The [format of those files](./doc/account.md) uses vertical bars
+as separators.  Examples can be found amoung the
+[tests](./tests/data/account2).
 
     1998-12-21|d|Deposit|278000
     1999-04-19|b|QQQ|100|99.75|29.95
@@ -80,17 +132,15 @@ found amoung the [tests](./tests/data/account2).
 To track changes in equity values, stock quotes for the holdings have to be
 retrieved, ideally on a daily basis.  The URI `/retrieve-quotes` retrieves
 quotes for all holdings and stores them as a file `iso-date.csv` in the
-directory described by the variable `quote_dir` in
-[stockquotes.py](./portfolioapi/stockquotes.py).  In addition, those quotes are
-stored in the SQLite database at the variable `quote_db` in
-[stockquotes.py](./portfolioapi/stockquotes.py).  After making changes to the
-text files containing stock quotes, the database needs to be repopulated by
-accessing `/update-quotes`.
+`quotes` directory.  In addition, those quotes are stored in an SQLite database
+(default: `cache/quotes.db`).  After making changes to the text files
+containing stock quotes, the database needs to be repopulated by accessing
+`/update-quotes`.
 
-For historical charts of accounts, SQLite databases are stored in `cache_dir`
-in [portfolio.py](./portfolioapi/portfolio.py).  If retroactive changes are
-made in an account text file, the corresponding database has to be cleared by
-accessing `/clear-history?account=xyz`.
+For historical charts of accounts, SQLite databases are stored in the `cache`
+directory.  If retroactive changes are made in an account text file, the
+corresponding database has to be cleared by accessing
+`/clear-history?account=xyz`.
 
 
 Import from Brokerage Accounts
@@ -99,36 +149,6 @@ Import from Brokerage Accounts
 Brokerage firms may offer the means to download transactions in the CSV
 format.  Various scripts in [ingest](./ingest) can convert those files at least
 partially to the required format.
-
-
-Usage
------
-
-Flask may run the app locally.  After installing Flask, you can run this
-command in a bash Terminal:
-
-    FLASK_APP=portfolioapi flask run
-
-In Windows, you can set the environment variable `FLASK_APP=portfolioapi` and
-do the same in a Command Prompt or Powershell.
-
-See below for changing the location of the cache database.
-
-Now, you can open this page in a web browser:
-`http://127.0.0.1:5000/static/report.html`
-
-If you have access to a web server running Apache, you can configure
-[mod_wsgi](https://modwsgi.readthedocs.io/) using the [sample
-configuration](./sample-mod_wsgi.conf).
-
-While you can access the pages as
-`https://server/portfolioapi/static/report.html`, it is preferable to have
-Apache serve the static pages.  That requires configuring Apache to serve the
-content of [portfolioapi/static](./portfolioapi/static), maybe after copying it
-elsewhere.  The file [api-url.js](./portfolioapi/static/js/api-url.js) needs to
-be edited.  For the sample configuration, it should have this content:
-
-    export const api_url_prefix = '/portfolioapi/';
 
 
 Stock Quotes

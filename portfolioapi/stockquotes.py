@@ -14,8 +14,8 @@ import re
 import urllib.request
 
 
-quote_dir = '/var/www/html/quotes'
-quote_db = '/var/www/portfolioapi/cache/quotes.db'
+quote_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'quotes')
+quote_db = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'cache/quotes.db')
 
 json_url_prefix = 'https://query1.finance.yahoo.com/v7/finance/quote?lang=en-US&region=US&corsDomain=finance.yahoo.com&fields=symbol,longName,shortName,regularMarketPrice,regularMarketChange,currency,regularMarketTime,regularMarketVolume,quantity,regularMarketDayHigh,regularMarketDayLow,regularMarketOpen,marketCap&symbols='
 json_url_suffix = '&formatted=false'
@@ -117,6 +117,7 @@ def retrieveQuotes(symbols, force=False):
     if d in getHolidays(d.year):
         return
     ds = d.isoformat()
+    os.makedirs(quote_dir, exist_ok=True)
     quote_path = os.path.join(quote_dir, '{0}.csv'.format(ds))
     if not force and os.path.exists(quote_path):
         return

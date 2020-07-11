@@ -18,8 +18,8 @@ from .stockquotes import getQuotes, getQuoteDates
 EPOCH = datetime.date(1970, 1, 1)
 LONG_DAYS = 365
 cash_like = set(['SWVXX', 'FZCXX', 'MIP CL 1'])
-data_dir = '/var/www/html/portfolio/data'
-cache_dir = '/var/www/portfolioapi/cache'
+data_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data')
+cache_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'cache')
 
 
 def makeDict(obj, keys):
@@ -1177,6 +1177,8 @@ def mergeHistoryEntries(entries):
 
 
 def updateHistory(account, date=None, accounts=[]):
+    if not account:
+        return
     date = date or Transaction.today()
     accounts = [(a[0], a[1],
                  Transaction.readTransactions(os.path.join(data_dir, a[1]), a[0]))
@@ -1241,6 +1243,7 @@ def updateHistory(account, date=None, accounts=[]):
 
 
 def getCursor(name):
+    os.makedirs(os.path.dirname(name), exist_ok=True)
     conn = sqlite3.connect(name)
     return conn.cursor()
 
