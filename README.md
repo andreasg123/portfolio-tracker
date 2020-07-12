@@ -1,7 +1,7 @@
 Stock Portfolio Tracker
 =======================
 
-This web-based app keeps track of a U.S. stocks in a portfolio of
+This web-based app keeps track of U.S. stocks in a portfolio of
 brokerage accounts.  Accounts holding mutual funds are supported too, as long
 as quotes for those mutual funds can be retrieved via their symbols (e.g.,
 `FSMAX`).
@@ -87,19 +87,27 @@ There are multiple HTML files:
   per equity. The row displays information such as the number of shares,
   the holding duration, the last closing price, the overall value, the
   cumulative dividends, and the percentage gain.  For options, the time value
-  is shown, too.
+  is shown, too.  Clicking on a column heading sorts by that column.  Clicking
+  on the `+` column expands multiple lots of the same equity.
+
+  ![report](./doc/report.png)
 
 * `taxes.html`: This shows the realized taxable gain or loss for the
   selected account and year.  Open positions are shown, too. Checkboxes for
   these open positions show the tax liability if the position would be closed
   now.
 
+  ![taxes](./doc/taxes.png)
+
 * `options.html`: This shows a long-term view of the profitability of option
   trades grouped by the underlying stock symbol.
 
+  ![options](./doc/options.png)
+
 * `annual.html`: This shows a multi-year view of an account with the deposits,
   equity and cash values for each year.  In addition, the annualized gain is
-  for 1, 3, 5, and 10 years compared against `SPY` - the ETF tracking the S&P 500.
+  shown for 1, 3, 5, and 10 years compared against `SPY` - the ETF tracking the
+  S&P 500.
 
 * `chart.html`: This shows a chart tracking the account value over the selected
   date interval.  A faint line indicates the cumulative deposits into that account.

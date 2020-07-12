@@ -23,11 +23,12 @@ Types of Actions
 
 * Buy (`b`), Sell (`s`): The additional fields are: the number of shares, the share
   price, and the total fee.  For buying, the fee is added to the total amount.
-  For selling, the fee is subtracted from the total amount.  Short sales sell an
-  equity without having a holding of it.  In this example, 100 shares of `QQQ`
-  were bought for $99.75 per share with a fee of $29.95.
+  For selling, the fee is subtracted from the total amount.  In this example,
+  100 shares of `QQQ` were bought for $99.75 per share with a fee of $29.95.
 
       1999-04-19|b|QQQ|100|99.75|29.95
+
+  Short sales sell an equity without having a holding of it.
 
 * Interest (`i`): This is either the dividend for a holding, interest on the cash
   balance, or negative margin interest.  For dividends, the stock symbol is in
