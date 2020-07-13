@@ -24,40 +24,56 @@ appropriate number of shares.  Cash-in-lieu of fractional shares is also
 expressed as a sale.
 
 
-Usage
------
+Installation
+------------
 
-First, enter or import equity transactions for one or more accounts into
-text files under the directory `portfolioapi/data`.  See below for the data format
-([samples](./tests/data/account2)).
+Python 3 is required.  On many systems, including macOS Catalina, that is
+available as `/usr/bin/python3`.  In Windows, you can either use `python3` in
+an [Ubuntu
+Terminal](https://www.microsoft.com/en-us/p/ubuntu-1804-lts/9n9tngvndl3q) or
+[install Python](https://www.python.org/downloads/windows/).
 
-Stock quotes may be retrieved from a financial service by accessing the URL
-`/retrieve-quotes`.  Alternatively, stock quotes may be imported from Quicken CSV or
-QIF files.
+Install Flask (requires `sudo` unless a local Python environment, e.g., via
+`virtualenv`, is used):
 
-Flask may run the app locally.  After installing Flask, run this command in a bash
-Terminal:
-
-    FLASK_APP=portfolioapi flask run
-
-In Windows, set the environment variable `FLASK_APP=portfolioapi` and
-run the previous command in a Command Prompt or Powershell.
-
-Next, open the following page in a web browser:
-`http://127.0.0.1:5000/static/report.html`
+    sudo pip3 install flask
 
 If you have access to a web server running Apache, you can configure
 [mod_wsgi](https://modwsgi.readthedocs.io/) using the [sample
 configuration](./sample-mod_wsgi.conf).
 
-While you can access the pages as
-`https://server/portfolioapi/static/report.html`, it is preferable to have
-Apache serve the static pages.  That requires configuring Apache to serve the
-content of [portfolioapi/static](./portfolioapi/static), maybe after copying it
-elsewhere.  The file [api-url.js](./portfolioapi/static/js/api-url.js) needs to
-be edited.  For the sample configuration, it should have this content:
+If you use Apache, it is recommended to have Apache serve the static pages.
+That requires configuring Apache to serve the content of
+[portfolioapi/static](./portfolioapi/static), maybe after copying it elsewhere.
+The file [api-url.js](./portfolioapi/static/js/api-url.js) needs to be edited.
+For the sample configuration, it should have this content:
 
     export const api_url_prefix = '/portfolioapi/';
+
+
+Usage
+-----
+
+Flask may run the app locally.  Run this command in a bash Terminal (add
+`--host=0.0.0.0` if you want to access the web server from another system):
+
+    FLASK_APP=portfolioapi flask run
+
+In Windows, set the environment variable `FLASK_APP=portfolioapi` and run
+`flask run` in a Command Prompt or Powershell.
+
+Enter or import equity transactions for one or more accounts into text files
+under the directory `portfolioapi/data` (create the directory first).  See
+below for the data format ([samples](./tests/data/account2)).  Stock quotes may
+be retrieved from a financial service by accessing the URL `/retrieve-quotes`.
+Alternatively, stock quotes may be imported from Quicken CSV or QIF files.
+
+Open the following page in a web browser:
+`http://127.0.0.1:5000/static/report.html`
+
+If you use Apache, open this page instead (after replacing `server` and `prefix` with
+the appropriate values):
+`https://server/prefix/report.html`
 
 
 Displays
