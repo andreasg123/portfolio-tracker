@@ -7,11 +7,12 @@ from flask import Blueprint, jsonify, request, Response
 from itertools import groupby
 import json
 import os
+import re
 import sys
 import traceback
 
 from .portfolio import Portfolio, Transaction, getOptionParameters, data_dir, cache_dir
-from .stockquotes import getQuotes, retrieveQuotes, storeAllQuotes
+from .stockquotes import getQuotes, retrieveQuotes, storeAllQuotes, getDateQuotes
 
 bp = Blueprint('views', __name__)
 
@@ -301,6 +302,19 @@ def update_quotes():
     storeAllQuotes()
     return Response('ok\n', mimetype='text/plain')
 
+
+@bp.route('/get-date-quotes')
+def get_date_quotes():
+    symbols = request.args.get('symbols', '')
+    symbols = re.split(r'[, ]', symbols)
+    start = request.args.get('start', '1970-01-01')
+    end = request.args.get('end', datetime.date.today().isoformat())
+    start = datetime.datetime.strptime(start, '%Y-%m-%d').date()
+    end = datetime.datetime.strptime(end, '%Y-%m-%d').date()
+    quotes = getDateQuotes(symbols, start, end)
+    data = [{'date': k, 'quotes': [{'symbol': x[1], 'close': x[2]} for x in g]}
+            for k, g in groupby(quotes, key=lambda x: x[0])]
+    return jsonify({'data': data})
 
 
 def init_portfolios(date, files, skip=None):

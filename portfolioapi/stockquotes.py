@@ -233,6 +233,19 @@ def getQuoteDates(start, end):
         c.connection.close()
 
 
+def getDateQuotes(symbols, start, end):
+    c = getQuoteCursor(quote_db)
+    try:
+        createQuoteTable(c)
+        c.execute('SELECT date,symbol,quote FROM quotes WHERE date>=? AND date<=? '
+                  'AND symbol IN ({0}) ORDER BY date,symbol'
+                  .format(','.join(['?'] * len(symbols))),
+                  [start.isoformat(), end.isoformat()] + symbols)
+        return c.fetchall()
+    finally:
+        c.connection.close()
+
+
 def setQuotePaths(dir_path, db_path):
     global quote_dir, quote_db
     quote_dir = dir_path
