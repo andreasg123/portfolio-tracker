@@ -1,6 +1,6 @@
 import UIKit
 
-class ViewController: UIViewController, UITableViewDataSource, DataRetrieverDelegate {
+class ViewController: UIViewController {
     // Do not force unwrap to facilitate tests
     @IBOutlet weak var tableView: UITableView?
     var cellValues: [[String]] = []
@@ -28,18 +28,10 @@ class ViewController: UIViewController, UITableViewDataSource, DataRetrieverDele
             retriever.retrieveData(url: url, user: user, password: password)
         }
     }
+}
 
-    func convertData(_ data: Data) -> [[String]]? {
-        // The account name should be another preference but this suffices as a sample.
-        if let report = try? JSONDecoder().decode(ReportData.self, from: data),
-            let account = report.accounts["ag-broker"] {
-            return account.lots.map{ [$0.symbol, String($0.nshares), String(report.quotes[$0.symbol] ?? 0.0)] }
-        }
-        return nil
-    }
-
-    // DataRetrieverDelegate
-
+// MARK: - DataRetrieverDelegate
+extension ViewController: DataRetrieverDelegate {
     func dataRetrieved(data: Data?, response: URLResponse?, error: Error?) {
         print("ViewController.dataRetrieved")
         if let error = error {
@@ -60,8 +52,18 @@ class ViewController: UIViewController, UITableViewDataSource, DataRetrieverDele
         }
     }
 
-    // UITableViewDataSource
+    func convertData(_ data: Data) -> [[String]]? {
+        // The account name should be another preference but this suffices as a sample.
+        if let report = try? JSONDecoder().decode(ReportData.self, from: data),
+            let account = report.accounts["ag-broker"] {
+            return account.lots.map{ [$0.symbol, String($0.nshares), String(report.quotes[$0.symbol] ?? 0.0)] }
+        }
+        return nil
+    }
+}
 
+// MARK: - UITableViewDataSource
+extension ViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return cellValues.count;
     }
