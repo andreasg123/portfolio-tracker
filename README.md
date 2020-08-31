@@ -133,7 +133,7 @@ Data Files
 ----------
 
 By default, all data files are stored in the subdirectories `data`, `cache`,
-and `quotes` of the directory [portfolioapi](./portfolio/).  Other than the
+and `quotes` of the directory [portfolioapi](./portfolioapi/).  Other than the
 `data` directory, those directories are created automatically if they do not
 exist.  If those directories should be elsewhere, it is easiest to symlink to
 the desired location.  Otherwise, variables at the top of
