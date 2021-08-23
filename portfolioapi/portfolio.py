@@ -27,6 +27,7 @@ def makeDict(obj, keys):
             for k, v in ((k, getattr(obj, k, None)) for k in keys)
             if v is not None}
 
+
 class Dividend:
     def __init__(self, date, amount):
         self.date = date
@@ -149,6 +150,11 @@ class Transaction:
         return ('%d|%s|%s|%s|%.3f|%.2f|%.2f' %
                 (self.date, self.type, self.name, self.name2, self.count,
                  self.amount1, self.amount2))
+
+    def format(self):
+        return ('%s|%s|%s|%s|%.3f|%.2f|%.2f' %
+                (self.toDate(self.date).isoformat(), self.type, self.name,
+                 self.name2, self.count, self.amount1, self.amount2))
 
     def is_cash_like(self):
         return self.name in cash_like
@@ -275,15 +281,13 @@ class Transaction:
         return transactions
 
     @staticmethod
-    def checkTransactions(filename):
+    def checkTransactions(trans):
         prev = 0
-        with open(filename, encoding='utf-8') as f:
-            for idx, x in enumerate(f):
-                t = Transaction.parse(x)
-                if t is not None:
-                    if t.date < prev:
-                        sys.stdout.write(str(idx + 1) + ' ' + x)
-                    prev = t.date
+        for t in trans:
+            if t.date < prev:
+                return t
+            prev = t.date
+        return None
 
     @staticmethod
     def checkOptions(filename):
@@ -337,8 +341,6 @@ def getOptionPair(symbol):
 
 
 class Portfolio:
-    account_transfers = []
-
     def __init__(self, date, account=None):
         self.portfolio_date = date
         self.account = account
@@ -430,9 +432,11 @@ class Portfolio:
 
     def sellLot(self, lt, sold_shares, share_price, share_expense, share_adj,
                 share_proceeds, date):
-        current_shares = sold_shares
         if lt.nshares <= 0:
             return (0, sold_shares)
+        if abs(sold_shares - lt.nshares) < 1e-6:
+            sold_shares = lt.nshares
+        current_shares = sold_shares
         if current_shares > lt.nshares:
             current_shares = lt.nshares
         sold_shares -= current_shares
@@ -1014,7 +1018,8 @@ class Portfolio:
             return None
         elif len(portfolios) == 1:
             return portfolios[0]
-        portfolio = Portfolio(portfolios[0].portfolio_date)
+        portfolio = Portfolio(portfolios[0].portfolio_date,
+                              portfolios[0].account)
         keys = sorted(set([k for p in portfolios for k in p.lots]))
         portfolio.lots = defaultdict(list,
                                      {k: [lt for p in portfolios
@@ -1052,39 +1057,41 @@ class Portfolio:
         return portfolio
 
     @staticmethod
-    def get_files(data_dir, account, date=None):
-        Portfolio.get_transfers(data_dir)
+    def get_files(data_dir, account, account_transfers=[], date=None):
         if not account:
             files = Transaction.getAccounts(data_dir)[:1]
         elif account == 'combined' or account == 'all':
             files = Transaction.getAccounts(data_dir)
         elif account == 'taxable':
-            files = ['ag-broker', 'al-broker', 'ameritrade', 'microsoft']
+            # 'ameritrade'
+            files = ['ag-broker', 'al-broker', 'microsoft']
         else:
             files = [account]
         if date:
-            drop = set([a[1] for a in Portfolio.account_transfers
+            drop = set([a[1] for a in account_transfers
                         if Transaction.parseDate(a[0]) <= date])
             files = [f for f in files if f not in drop]
         return files
 
     @staticmethod
     def get_transfers(data_dir):
-        Portfolio.account_transfers = []
         try:
+            # Use a local variable because this may be called in parallel.
+            transfers = []
             with open(os.path.join(data_dir, 'transfers'),
                       encoding='utf-8') as f:
                 for x in f:
                     val = x.split('#', 1)[0].rstrip().split('|')
                     if len(val) >= 3:
-                        Portfolio.account_transfers.append(val)
+                        transfers.append(val)
+            return transfers
         except FileNotFoundError:
-            pass
+            return []
 
     @staticmethod
-    def readTransfers(date, account, skip=None):
+    def readTransfers(date, account, account_transfers, skip=None):
         accounts = [(Transaction.parseDate(a[0]), a[1])
-                    for a in Portfolio.account_transfers
+                    for a in account_transfers
                     if a[2] == account and Transaction.parseDate(a[0]) <= date]
         accounts.sort()
         accounts = [(a[0], a[1],
@@ -1094,10 +1101,11 @@ class Portfolio:
         return [a for a in accounts if a[2]]
 
     @staticmethod
-    def getHistory(account, start=0, end=None, include_positions=False):
+    def getHistory(account, account_transfers, start=0, end=None,
+                   include_positions=False):
         end = end or Transaction.today()
         accounts = [(Transaction.parseDate(a[0]), a[1])
-                    for a in Portfolio.account_transfers
+                    for a in account_transfers
                     if a[2] == account and Transaction.parseDate(a[0]) <= end]
         accounts.sort()
         for a in accounts:
@@ -1143,13 +1151,13 @@ class Portfolio:
                 for r in rows]
 
     @staticmethod
-    def clearHistory(account):
+    def clearHistory(account, account_transfers=[]):
         if account == 'all':
             accounts = [x[:-3] for x in os.listdir(cache_dir)
                         if x != 'quotes.db' and x.endswith('.db')]
             print(accounts)
         else:
-            accounts = [a[1] for a in Portfolio.account_transfers
+            accounts = [a[1] for a in account_transfers
                         if a[2] == account]
             accounts.append(account)
         for a in accounts:
@@ -1268,15 +1276,17 @@ def main2(argv):
     date = Transaction.parseDate(argv[2]) if len(argv) > 2 else Transaction.today()
     skip = None
     # skip = 'options'
-    files = Portfolio.get_files(data_dir, argv[1], date)
+    account_transfers = Portfolio.get_transfers(data_dir)
+    files = Portfolio.get_files(data_dir, argv[1], account_transfers, date)
     portfolios = []
     for f in files:
-        trans = Transaction.readTransactions(os.path.join(data_dir, f), date, skip=skip)
+        trans = Transaction.readTransactions(os.path.join(data_dir, f), date,
+                                             skip=skip)
         # print(trans[-1])
         # print([str(t) for t in trans[-4:]])
         append = bool(trans)
         accounts = [(Transaction.parseDate(a[0]), a[1])
-                    for a in Portfolio.account_transfers
+                    for a in account_transfers
                     if a[2] == f and Transaction.parseDate(a[0]) <= date]
         accounts.sort()
         portfolio = Portfolio(date)

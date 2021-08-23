@@ -24,7 +24,8 @@ def get_accounts():
     try:
         date = get_date(date, year)
         d = Transaction.parseDate(date)
-        files = Portfolio.get_files(data_dir, 'all', d)
+        account_transfers = Portfolio.get_transfers(data_dir)
+        files = Portfolio.get_files(data_dir, 'all', account_transfers, d)
         data = {'accounts': files}
     except:
         data = format_exception()
@@ -42,7 +43,8 @@ def get_report():
         d = Transaction.parseDate(date)
         y = Transaction.toYear(d)
         prev_year_end = Transaction.fromYearEnd(y - 1)
-        files = Portfolio.get_files(data_dir, account, d)
+        account_transfers = Portfolio.get_transfers(data_dir)
+        files = Portfolio.get_files(data_dir, account, account_transfers, d)
         if not account:
             account = files[0]
         account_portfolios = {}
@@ -51,7 +53,10 @@ def get_report():
         data = {}
         quote_splits = {}
         year_quote_splits = {}
-        portfolios = init_portfolios(d, files, skip=skip)
+        portfolios, error = init_portfolios(d, files, account_transfers,
+                                            skip=skip)
+        if error:
+            return jsonify({'error': f'Account: {error["account"]}, Transaction: {error["transaction"].format()}'})
         share_diffs = []
         # TODO: if a stock changes its symbol during the year, the year-end
         # quote for the old symbol has to be included.
@@ -120,22 +125,30 @@ def get_report():
 
 @bp.route('/get-taxes')
 def get_taxes():
-    account = request.args.get('account')
-    year = request.args.get('year', str(datetime.date.today().year))
-    skip = request.args.get('skip')
     try:
-        date = Transaction.parseDate(get_date(None, year))
-        files = Portfolio.get_files(data_dir, account, date)
-        if not account:
-            account = files[0]
-        portfolio = Portfolio.combine(init_portfolios(date, files, skip=skip))
-        data = portfolio.toDict(year=year)
-        data['year'] = year
-        data['account'] = account
-        data['quotes'] = getQuotes(datetime.date(int(year), 12, 31))
+        data = get_taxes2(request.args.get('account'),
+                          request.args.get('year',
+                                           str(datetime.date.today().year)),
+                          request.args.get('skip'))
     except:
         data = format_exception()
     return jsonify(data)
+
+
+def get_taxes2(account, year=None, skip=None):
+    date = Transaction.parseDate(get_date(None, year))
+    account_transfers = Portfolio.get_transfers(data_dir)
+    files = Portfolio.get_files(data_dir, account, account_transfers, date)
+    if not account:
+        account = files[0]
+    portfolios, _ = init_portfolios(date, files, account_transfers, 
+                                    skip=skip)
+    portfolio = Portfolio.combine(portfolios)
+    data = portfolio.toDict(year=year)
+    data['year'] = year
+    data['account'] = account
+    data['quotes'] = getQuotes(datetime.date(int(year), 12, 31))
+    return data
 
 
 @bp.route('/get-annual')
@@ -158,11 +171,12 @@ def get_annual2(account, year=None, skip=None):
     else:
         date = today.isoformat()
     d = Transaction.parseDate(date)
-    files = Portfolio.get_files(data_dir, account, d)
+    account_transfers = Portfolio.get_transfers(data_dir)
+    files = Portfolio.get_files(data_dir, account, account_transfers, d)
     # Still need to implement "combined" (year loop outside file loop?)
     for f in files:
         trans = Transaction.readTransactions(os.path.join(data_dir, f), d, skip=skip)
-        accounts = Portfolio.readTransfers(d, f, skip=skip)
+        accounts = Portfolio.readTransfers(d, f, account_transfers, skip=skip)
         if not trans and not accounts:
             continue
         years = []
@@ -241,11 +255,13 @@ def get_options():
     date = request.args.get('date', datetime.date.today().isoformat())
     try:
         d = Transaction.parseDate(date)
-        files = Portfolio.get_files(data_dir, account, d)
+        account_transfers = Portfolio.get_transfers(data_dir)
+        files = Portfolio.get_files(data_dir, account, account_transfers, d)
         if not account:
             account = files[0]
         # No need to skip options because this is only useful for options
-        portfolio = Portfolio.combine(init_portfolios(d, files))
+        portfolios, _ = init_portfolios(d, files, account_transfers)
+        portfolio = Portfolio.combine(portfolios)
         data = portfolio.toDict(all=True)
         data['account'] = account
         data['date'] = date
@@ -282,15 +298,18 @@ def get_history():
 @bp.route('/clear-history')
 def clear_history():
     account = request.args.get('account')
-    Portfolio.clearHistory(account)
+    account_transfers = Portfolio.get_transfers(data_dir)
+    Portfolio.clearHistory(account, account_transfers)
     return Response('ok\n', mimetype='text/plain')
 
 
 @bp.route('/retrieve-quotes')
 def retrieve_quotes():
     date = Transaction.parseDate(datetime.date.today().isoformat())
-    files = Portfolio.get_files(data_dir, 'combined')
-    portfolio = Portfolio.combine(init_portfolios(date, files))
+    account_transfers = Portfolio.get_transfers(data_dir)
+    files = Portfolio.get_files(data_dir, 'combined', account_transfers)
+    portfolios, _ = init_portfolios(date, files, account_transfers)
+    portfolio = Portfolio.combine(portfolios)
     force = request.args.get('force') == 'true'
     retrieveQuotes(portfolio.getCurrentSymbols(), force=force)
     return Response('ok\n', mimetype='text/plain')
@@ -317,17 +336,23 @@ def get_date_quotes():
     return jsonify({'data': data})
 
 
-def init_portfolios(date, files, skip=None):
+def init_portfolios(date, files, account_transfers, skip=None):
     # This approach prevents the detection of wash sales across
     # accounts. While those are wash sales, they are confusing and should
     # be avoided.
     portfolios = []
+    error = None
     for f in files:
-        trans = Transaction.readTransactions(os.path.join(data_dir, f), date, skip=skip)
-        accounts = Portfolio.readTransfers(date, f, skip=skip)
+        trans = Transaction.readTransactions(os.path.join(data_dir, f), date,
+                                             skip=skip)
+        bad = Transaction.checkTransactions(trans)
+        if bad:
+            error = {'account': f, 'transaction': bad}
+        accounts = Portfolio.readTransfers(date, f, account_transfers,
+                                           skip=skip)
         if not trans and not accounts:
             continue
-        portfolio = Portfolio(date)
+        portfolio = Portfolio(date, f)
         start = 0
         for end, _, trans2 in accounts:
             portfolio.fillLots([t for t in trans
@@ -337,9 +362,8 @@ def init_portfolios(date, files, skip=None):
             p.fillLots(trans2)
             portfolio = Portfolio.combine([portfolio, p])
         portfolio.fillLots([t for t in trans if t.date > start])
-        portfolio.account = f
         portfolios.append(portfolio)
-    return portfolios
+    return (portfolios, error)
 
 
 def format_exception():
@@ -354,7 +378,10 @@ def get_date(date, year):
 
 
 if __name__ == '__main__':
+    # To run this, cd to parent directory and run:
+    # python -m portfolioapi.views
     # retrieve_quotes()
     skip = None
     # skip = 'options'
-    print(get_annual2('ag-broker', skip=skip))
+    # print(get_annual2('ag-broker', skip=skip))
+    get_taxes2('al-broker', '2020', skip=skip)

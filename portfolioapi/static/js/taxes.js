@@ -91,7 +91,7 @@ function TaxGroup(props) {
     children.push(e('td', {}, i === props.lots.length - 1 ?
                     formatAmount(props.total_gain) : ''));
     if (props.show_account) {
-      const url = `?account=${props.account}&year=${props.year}`;
+      const url = `?account=${lt.account}&year=${props.year}`;
       children.push(e('td', {className: 'left small', style: {paddingLeft: '1em'}},
                       e('a', {href: url}, lt.account)));
     }
