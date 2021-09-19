@@ -81,9 +81,9 @@ function AccountHeader(props) {
   });
   return e('tr', {},
            e('th', {style: {textAlign: 'left'}},
-             e('a', {href: info_url + stocks.join(',')}, 'stock'),
-             ' / ',
-             e('a', {href: info_url + options.join(',')}, 'option')),
+             stocks.length ? e('a', {href: info_url + stocks.join(',')}, 'stock') : null,
+             stocks.length && options.length ? ' / ' : null,
+             options.length ? e('a', {href: info_url + options.join(',')}, 'option') : null),
            e('th', {},
              e('a', {className: 'expander', href: '', onClick: props.onCollapse},
                props.collapsed ? '+' : '-')),
@@ -284,7 +284,7 @@ function AccountReport(props) {
                 ...entries.map((s, i) => e(AccountGroup, {
                   collapsed,
                   symbol: s[0],
-                  url: info_url + s,
+                  url: info_url + s[0],
                   lots: s[1],
                   odd: i % 2 !== 0,
                   date: date,
